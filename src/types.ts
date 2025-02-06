@@ -28,10 +28,10 @@ export type Operator = ComparisonOperator | ArrayOperator;
 
 export type TypedCondition<T, P extends PathsToStringProps<T>> = {
   field: P;
-  operator: ValueAtPath<T, P> extends Array<any>
+  operator: ValueAtPath<T, P> extends Array<infer U>
     ? ArrayOperator
     : ComparisonOperator;
-  value: ValueAtPath<T, P>;
+  value: ValueAtPath<T, P> extends Array<infer U> ? U : ValueAtPath<T, P>;
 };
 
 export type Permission<T, S> = {
