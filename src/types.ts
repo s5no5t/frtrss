@@ -4,14 +4,34 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
+export type PathsToStringProps<T> = T extends object
+  ? {
+      [K in keyof T]: K extends string
+        ? T[K] extends object
+          ? K | `${K}.${PathsToStringProps<T[K]>}`
+          : K
+        : never;
+    }[keyof T]
+  : never;
+
+export type ValueAtPath<T, P extends string> = P extends keyof T
+  ? T[P]
+  : P extends `${infer K}.${infer R}`
+  ? K extends keyof T
+    ? ValueAtPath<T[K], R>
+    : never
+  : never;
+
 export type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
 export type ArrayOperator = "contains";
 export type Operator = ComparisonOperator | ArrayOperator;
 
-export type TypedCondition<T, K extends keyof T> = {
-  field: K;
-  operator: T[K] extends Array<any> ? ArrayOperator : ComparisonOperator;
-  value: T[K];
+export type TypedCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: ValueAtPath<T, P> extends Array<any>
+    ? ArrayOperator
+    : ComparisonOperator;
+  value: ValueAtPath<T, P>;
 };
 
 export type Permission<T, S> = {
@@ -19,7 +39,7 @@ export type Permission<T, S> = {
   action: string;
   object: string;
   fields: string[];
-  conditions: Array<TypedCondition<T, keyof T>>;
+  conditions: Array<TypedCondition<T, PathsToStringProps<T>>>;
   type: "allow" | "deny";
 };
 

@@ -1,4 +1,4 @@
-import { Permission, TypedCondition } from "./types";
+import { Permission, TypedCondition, PathsToStringProps } from "./types";
 
 export class TypedPermissionBuilder<T> {
   private permissions: Array<Permission<T, any>> = [];
@@ -82,7 +82,7 @@ export class TypedFieldBuilder<T, S> {
 }
 
 export class TypedConditionBuilder<T, S> {
-  private conditions: Array<TypedCondition<T, keyof T>> = [];
+  private conditions: Array<TypedCondition<T, PathsToStringProps<T>>> = [];
 
   constructor(
     private builder: TypedPermissionBuilder<T>,
@@ -93,10 +93,10 @@ export class TypedConditionBuilder<T, S> {
     private fields: Array<string>
   ) {}
 
-  when<K extends keyof T>(
-    condition: TypedCondition<T, K>
+  when<P extends PathsToStringProps<T>>(
+    condition: TypedCondition<T, P>
   ): TypedPermissionBuilder<T> {
-    this.conditions.push(condition as TypedCondition<T, keyof T>);
+    this.conditions.push(condition as TypedCondition<T, PathsToStringProps<T>>);
     this.builder.addPermission({
       subject: this.subject,
       action: this.action,
@@ -188,10 +188,10 @@ export class TypedPermissions<T> {
   }
 
   private evaluateCondition(
-    condition: TypedCondition<T, keyof T>,
+    condition: TypedCondition<T, PathsToStringProps<T>>,
     data: T
   ): boolean {
-    const value = this.getFieldValue(data, condition.field as string);
+    const value = this.getFieldValue(data, condition.field);
 
     switch (condition.operator) {
       case "eq":
