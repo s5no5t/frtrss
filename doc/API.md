@@ -6,6 +6,7 @@
    - [Basic Permission Check](#1-basic-permission-check)
    - [Field-level Permission](#2-field-level-permission)
    - [Attribute-Based Access Control (ABAC)](#3-attribute-based-access-control-abac)
+   - [Multiple Subject Types](#4-multiple-subject-types)
 3. [Conclusion](#conclusion)
 
 ## Public API Methods
@@ -205,3 +206,113 @@ console.log(`User can read content: ${canReadContent}`);
 
 **Explanation:**  
 This use case extends the field-level permission by introducing an attribute-based rule. The permission for reading the "content" field is granted only if the document's `metadata.status` equals "published". This type of rule is helpful for enforcing extra layers of security via runtime data conditions.
+
+---
+
+### 4. Multiple Subject Types
+In real-world applications, you often need to handle different types of subjects (e.g., application users, service accounts, API clients) with different attributes and permission requirements.
+
+**Example Code:**
+```typescript
+import { PermissionBuilder } from "frtrss";
+
+// Define different subject types
+interface ApplicationUser {
+  type: "user";
+  id: string;
+  role: "admin" | "editor" | "viewer";
+  department: string;
+}
+
+interface ServiceAccount {
+  type: "service";
+  serviceId: string;
+  permissions: string[];
+  environment: "development" | "production";
+}
+
+interface Document {
+  id: string;
+  metadata: {
+    title: string;
+    status: "draft" | "published" | "archived";
+    department: string;
+  };
+  content: string;
+}
+
+// Create separate permission builders for different subject types
+const permissions = new PermissionBuilder<Document>()
+  // Allow application users from the same department
+  .allow<ApplicationUser>({ 
+    type: "user",
+    id: "user-1",
+    role: "editor",
+    department: "engineering"
+  })
+  .to("write")
+  .on("Document")
+  .when({
+    field: "metadata.department",
+    operator: "eq",
+    value: "engineering"
+  })
+  // Allow service accounts in production
+  .allow<ServiceAccount>({
+    type: "service",
+    serviceId: "backup-service",
+    permissions: ["read_all"],
+    environment: "production"
+  })
+  .to("read")
+  .on("Document")
+  .build();
+
+// Check permissions for an application user
+const canUserWrite = permissions.check({
+  subject: {
+    type: "user",
+    id: "user-1",
+    role: "editor",
+    department: "engineering"
+  },
+  action: "write",
+  object: "Document",
+  field: "content",
+  data: {
+    metadata: { 
+      department: "engineering",
+      status: "draft"
+    }
+  }
+});
+
+// Check permissions for a service account
+const canServiceRead = permissions.check({
+  subject: {
+    type: "service",
+    serviceId: "backup-service",
+    permissions: ["read_all"],
+    environment: "production"
+  },
+  action: "read",
+  object: "Document",
+  field: "content",
+  data: {
+    metadata: { 
+      department: "engineering",
+      status: "published"
+    }
+  }
+});
+
+console.log(`Application user can write: ${canUserWrite}`);
+console.log(`Service account can read: ${canServiceRead}`);
+```
+
+**Explanation:**  
+This example demonstrates how to handle different types of subjects with distinct attributes and permission requirements:
+- Application users are granted write access only to documents within their department
+- Service accounts are given read-only access across all departments when running in production
+- Each subject type has its own set of attributes that can be used in permission rules
+- The permission builder can handle multiple subject types in a type-safe manner using TypeScript generics
