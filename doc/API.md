@@ -12,7 +12,7 @@
 ## Public API Methods
 
 ### `PermissionBuilder<T>`
-The `PermissionBuilder` class is the main entry point for creating your permission policies. It is a generic builder that lets you configure permissions based on a resource type `T`.
+The `PermissionBuilder` class is the main entry point for creating your permission policies. It is a generic builder that lets you configure permissions based on a resource type `T`. All methods return the builder instance, allowing for fluent method chaining.
 
 **Public Methods:**
 
@@ -20,51 +20,63 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   Registers a subject (for example, a user or service) that is allowed permission.  
   _Usage:_  
   ```typescript
-  .allow({ id: "1", role: "editor" })
+  new PermissionBuilder<Document>()
+    .allow({ id: "1", role: "editor" })    // Start building a permission rule
+    // ... chain other methods to complete the rule ...
   ```
 
 - **`deny<S>(subject: S): PermissionBuilder<T>`**  
   Registers a subject that is explicitly denied permission. Deny rules take precedence over allow rules.  
   _Usage:_  
   ```typescript
-  .deny({ id: "2", role: "user" })
+  new PermissionBuilder<Document>()
+    .deny({ id: "2", role: "user" })       // Start building a deny rule
+    // ... chain other methods to complete the rule ...
   ```
 
 - **`to(action: string): PermissionBuilder<T>`**  
   Specifies the action that the permission applies to (e.g., "read", "write"). Can accept either a single action string or an array of actions.  
   _Usage:_  
   ```typescript
-  // Single action
-  .to("read")
+  // ... after allow() or deny() ...
+    .to("read")                            // Chain single action
+    // ... continue chaining ...
 
-  // Multiple actions
-  .to(["read", "write", "delete"])
+  // Or with multiple actions
+    .to(["read", "write", "delete"])       // Chain multiple actions
+    // ... continue chaining ...
   ```
 
 - **`on(object: string): PermissionBuilder<T>`**  
   Defines the resource (object) the permission is related to, like "Document".  
   _Usage:_  
   ```typescript
-  .on("Document")
+  // ... after to() ...
+    .on("Document")                        // Chain the target object
+    // ... continue chaining ...
   ```
 
 - **`fields(fieldList: string[]): PermissionBuilder<T>`**  
   Restricts the permission to specific fields of the target resource. Field paths are provided as an array of strings. Supports wildcards for flexible field matching.  
   _Usage:_  
   ```typescript
-  // Specific fields
-  .fields(["metadata.title", "content"])
+  // ... after on() ...
+    // Chain specific fields
+    .fields(["metadata.title", "content"])
+    // ... continue chaining ...
 
-  // Using wildcards
-  .fields([
-    "*",                    // All fields at root level
-    "metadata.*",           // All fields under metadata
-    "comments.*.text",      // The text field of all comments
-    "metadata.*.published"  // The published field under any metadata subfield
-  ])
+  // Or using wildcards
+    .fields([
+      "*",                    // All fields at root level
+      "metadata.*",           // All fields under metadata
+      "comments.*.text",      // The text field of all comments
+      "metadata.*.published"  // The published field under any metadata subfield
+    ])
+    // ... continue chaining ...
 
-  // Or use the convenience method for all fields
-  .allFields()  // equivalent to .fields(["*"])
+  // Or use the convenience method
+    .allFields()              // Chain wildcard for all fields
+    // ... continue chaining ...
   ```
 
 - **`when(condition: { field: string, operator: string, value: any }): PermissionBuilder<T>`**  
@@ -86,39 +98,45 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
 
   _Usage:_  
   ```typescript
-  // Using comparison operator
-  .when({
-    field: "metadata.status",
-    operator: "eq",
-    value: "published",
-  })
+  // ... after fields() ...
+    // Chain a comparison condition
+    .when({
+      field: "metadata.status",
+      operator: "eq",
+      value: "published",
+    })
+    // ... continue chaining ...
 
-  // Using array operator
-  .when({
-    field: "reviewers",
-    operator: "in",
-    value: "user123",
-  })
+    // Chain an array condition
+    .when({
+      field: "reviewers",
+      operator: "in",
+      value: "user123",
+    })
+    // ... continue chaining ...
 
-  // Using array size operator
-  .when({
-    field: "tags",
-    operator: "size",
-    value: 3,
-  })
+    // Chain a size condition
+    .when({
+      field: "tags",
+      operator: "size",
+      value: 3,
+    })
+    // ... continue chaining ...
   ```
 
 - **`build(): PermissionPolicy`**  
   Finalizes and constructs the permission policy based on the configured rules.  
   _Usage:_  
   ```typescript
-  .build();
+  // ... after all other methods ...
+    .build()                               // End the chain and build the policy
   ```
 
 - **`check(options: { subject: any, action: string, object: string, field: string, data: any }): boolean`**  
   Evaluates whether a given subject is permitted to perform the specified action on the object/field, based on the built policy.  
   _Usage:_  
   ```typescript
+  // After building the policy
   const canRead = permissions.check({
     subject: { id: "1", role: "editor" },
     action: "read",
@@ -153,11 +171,12 @@ interface Document {
   content: string;
 }
 
+// Build a permission policy using method chaining
 const permissions = new PermissionBuilder<Document>()
-  .allow<User>({ id: "1", role: "editor" })
-  .to("read")
-  .on("Document")
-  .build();
+  .allow<User>({ id: "1", role: "editor" })  // Start with allowing a subject
+  .to("read")                                // Chain the action
+  .on("Document")                            // Chain the target object
+  .build();                                  // End chain and build the policy
 
 const canRead = permissions.check({
   subject: { id: "1", role: "editor" },
