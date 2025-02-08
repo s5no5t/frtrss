@@ -46,12 +46,42 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
 
 - **`when(condition: { field: string, operator: string, value: any }): PermissionBuilder<T>`**  
   Adds an attribute-based condition to refine the permission. The condition is applied against the resource's data properties.  
+  
+  Available operators:
+  - Comparison Operators:
+    - `eq`: Equal to - checks if the field value exactly matches the specified value
+    - `ne`: Not equal to - checks if the field value does not match the specified value
+    - `gt`: Greater than - checks if the field value is greater than the specified value
+    - `gte`: Greater than or equal to - checks if the field value is greater than or equal to the specified value
+    - `lt`: Less than - checks if the field value is less than the specified value
+    - `lte`: Less than or equal to - checks if the field value is less than or equal to the specified value
+  
+  - Array Operators:
+    - `in`: Contains - checks if the specified value exists in an array field
+    - `nin`: Not contains - checks if the specified value does not exist in an array field
+    - `size`: Array length - checks if the array field's length matches the specified value (must be a number)
+
   _Usage:_  
   ```typescript
+  // Using comparison operator
   .when({
     field: "metadata.status",
     operator: "eq",
     value: "published",
+  })
+
+  // Using array operator
+  .when({
+    field: "reviewers",
+    operator: "in",
+    value: "user123",
+  })
+
+  // Using array size operator
+  .when({
+    field: "tags",
+    operator: "size",
+    value: 3,
   })
   ```
 
