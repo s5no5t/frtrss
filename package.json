@@ -31,10 +31,10 @@
     "authorization",
     "permissions",
     "typescript",
-    "rbac",
+    "abac",
     "access-control"
   ],
-  "author": "",
+  "author": "Stephan Oehlert <stephan.oehlert@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.11.16",
