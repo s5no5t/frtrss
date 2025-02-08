@@ -75,6 +75,14 @@ frtrss implements [Attribute-Based Access Control (ABAC)](https://en.wikipedia.o
 
 This approach allows for more dynamic and fine-grained access control compared to traditional role-based systems, enabling complex permission rules based on data properties and conditions.
 
+## frtrss vs [casl.js](https://github.com/stalniy/casl)
+
+* simpler and more intuitive API
+* more type safety and developer experience
+* doesn't rely on class reflection for object types
+* more explicit about field-level permissions
+* zod schema validation
+
 ## Development
 
 ```bash
