@@ -8,9 +8,27 @@ import {
 } from "./types";
 import { validateDTO } from "./validation";
 
+/**
+ * A class that manages and evaluates permissions for a given data type T.
+ * @template T The type of data that permissions will be checked against
+ */
 export class Permissions<T> {
+  /**
+   * Creates a new Permissions instance
+   * @param permissions An array of Permission objects that define the rules
+   */
   constructor(private permissions: Array<Permission<T, any>>) {}
 
+  /**
+   * Checks if a given request is allowed based on the defined permissions
+   * @param params The permission check parameters
+   * @param params.subject The subject requesting access
+   * @param params.action The action being performed
+   * @param params.object The object being accessed
+   * @param params.field The specific field being accessed
+   * @param params.data The data being evaluated
+   * @returns boolean True if the request is allowed, false otherwise
+   */
   check(params: {
     subject: any;
     action: string;
@@ -134,6 +152,10 @@ export class Permissions<T> {
     }, obj);
   }
 
+  /**
+   * Converts the permissions to a DTO format for serialization
+   * @returns PermissionsDTO The permissions in DTO format
+   */
   toDTO(): PermissionsDTO {
     const rules: PermissionRuleDTO[] = this.permissions.map((permission) => ({
       effect: permission.type,
@@ -151,6 +173,14 @@ export class Permissions<T> {
     };
   }
 
+  /**
+   * Creates a Permissions instance from a DTO
+   * @template T The type of data that permissions will be checked against
+   * @param dto The DTO to create permissions from
+   * @param validate Whether to validate the DTO using zod schema
+   * @returns Permissions<T> A new Permissions instance
+   * @throws PermissionValidationError if the DTO is invalid
+   */
   static fromDTO<T>(dto: unknown, validate = false): Permissions<T> {
     try {
       const parsedDTO = validate

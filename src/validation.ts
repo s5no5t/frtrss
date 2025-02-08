@@ -1,6 +1,13 @@
 import { z } from "zod";
 import type { PermissionRuleDTO, PermissionsDTO } from "./types";
 
+/**
+ * Validates a permissions DTO using zod schema validation
+ * @param dto The DTO to validate
+ * @param shouldValidate Whether to perform validation (if false, returns dto as-is)
+ * @returns PermissionsDTO The validated DTO
+ * @throws Error if validation fails
+ */
 export function validateDTO(
   dto: unknown,
   shouldValidate = false
