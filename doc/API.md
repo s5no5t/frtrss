@@ -42,10 +42,22 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   ```
 
 - **`fields(fieldList: string[]): PermissionBuilder<T>`**  
-  Restricts the permission to specific fields of the target resource. Field paths are provided as an array of strings.  
+  Restricts the permission to specific fields of the target resource. Field paths are provided as an array of strings. Supports wildcards for flexible field matching.  
   _Usage:_  
   ```typescript
+  // Specific fields
   .fields(["metadata.title", "content"])
+
+  // Using wildcards
+  .fields([
+    "*",                    // All fields at root level
+    "metadata.*",           // All fields under metadata
+    "comments.*.text",      // The text field of all comments
+    "metadata.*.published"  // The published field under any metadata subfield
+  ])
+
+  // Or use the convenience method for all fields
+  .allFields()  // equivalent to .fields(["*"])
   ```
 
 - **`when(condition: { field: string, operator: string, value: any }): PermissionBuilder<T>`**  
