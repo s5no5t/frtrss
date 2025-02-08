@@ -109,7 +109,8 @@ class PermissionBuilder<T> {
 }
 
 class ActionBuilder<T, S> {
-  to(action: string): ObjectBuilder<T, S>;
+  // Accepts a single action or an array of actions
+  to(actions: string | string[]): ObjectBuilder<T, S>;
 }
 
 class ObjectBuilder<T, S> {
@@ -302,9 +303,9 @@ interface Document {
 }
 
 const permissions = new PermissionBuilder<Document>()
-  // Basic equality check
+  // Multiple actions in a single rule
   .allow<User>({ id: "1", role: "editor" })
-  .to("read")
+  .to(["read", "list"])
   .on("Document")
   .fields(["metadata.title", "content", "author.name"])
   .when({
@@ -312,9 +313,9 @@ const permissions = new PermissionBuilder<Document>()
     operator: "eq",
     value: "published",
   })
-  // Not equal check
+  // Single action
   .allow<User>({ id: "1", role: "editor" })
-  .to("read")
+  .to("write")
   .on("Document")
   .fields(["metadata.title"])
   .when({
@@ -322,36 +323,12 @@ const permissions = new PermissionBuilder<Document>()
     operator: "ne",
     value: "archived",
   })
-  // Array membership check
-  .allow<User>({ id: "1", role: "admin" })
-  .to("update")
+  // Multiple actions with deny rule
+  .deny<User>({ id: "1", role: "editor" })
+  .to(["delete", "archive"])
   .on("Document")
-  .fields(["metadata.tags"])
-  .when({
-    field: "metadata.tags",
-    operator: "in",
-    value: "important",
-  })
-  // Array non-membership check
-  .allow<User>({ id: "1", role: "editor" })
-  .to("read")
-  .on("Document")
-  .fields(["content"])
-  .when({
-    field: "metadata.tags",
-    operator: "nin",
-    value: "private",
-  })
-  // Array size check
-  .allow<User>({ id: "1", role: "editor" })
-  .to("update")
-  .on("Document")
-  .fields(["metadata.version"])
-  .when({
-    field: "reviewers",
-    operator: "size",
-    value: 2,
-  })
+  .fields(["*"])
+  .and()
   .build();
 
 // Usage with type checking
@@ -379,14 +356,9 @@ const user: User = {
 };
 
 // Type-safe permission checks
-const canRead = permissions.checkObject(user, "read", "Document", doc);
-const canUpdate = permissions.check({
-  subject: user,
-  action: "update",
-  object: "Document",
-  field: "metadata.version",
-  data: { metadata: { version: 2 } },
-});
+const canRead = permissions.checkObject(user, "read", "Document", doc); // true
+const canList = permissions.checkObject(user, "list", "Document", doc); // true
+const canDelete = permissions.checkObject(user, "delete", "Document", doc); // false
 ```
 
 ### 6.2 Example with multiple resource types

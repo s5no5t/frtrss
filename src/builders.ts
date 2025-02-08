@@ -28,12 +28,13 @@ export class ActionBuilder<T, S> {
     private type: "allow" | "deny"
   ) {}
 
-  to(action: string): ObjectBuilder<T, S> {
+  to(actions: string | string[]): ObjectBuilder<T, S> {
+    const actionArray = Array.isArray(actions) ? actions : [actions];
     return new ObjectBuilder<T, S>(
       this.builder,
       this.subject,
       this.type,
-      action
+      actionArray
     );
   }
 }
@@ -43,7 +44,7 @@ export class ObjectBuilder<T, S> {
     private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
-    private action: string
+    private actions: string[]
   ) {}
 
   on(object: string): FieldBuilder<T, S> {
@@ -51,7 +52,7 @@ export class ObjectBuilder<T, S> {
       this.builder,
       this.subject,
       this.type,
-      this.action,
+      this.actions,
       object
     );
   }
@@ -62,7 +63,7 @@ export class FieldBuilder<T, S> {
     private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
-    private action: string,
+    private actions: string[],
     private object: string
   ) {}
 
@@ -71,7 +72,7 @@ export class FieldBuilder<T, S> {
       this.builder,
       this.subject,
       this.type,
-      this.action,
+      this.actions,
       this.object,
       fields.map((field) => String(field))
     );
@@ -89,7 +90,7 @@ export class ConditionBuilder<T, S> {
     private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
-    private action: string,
+    private actions: string[],
     private object: string,
     private fields: Array<string>
   ) {}
@@ -98,26 +99,30 @@ export class ConditionBuilder<T, S> {
     condition: Condition<T, P>
   ): PermissionBuilder<T> {
     this.conditions.push(condition);
-    this.builder.addPermission({
-      subject: this.subject,
-      action: this.action,
-      object: this.object,
-      fields: this.fields,
-      conditions: this.conditions,
-      type: this.type,
-    });
+    for (const action of this.actions) {
+      this.builder.addPermission({
+        subject: this.subject,
+        action,
+        object: this.object,
+        fields: this.fields,
+        conditions: this.conditions,
+        type: this.type,
+      });
+    }
     return this.builder;
   }
 
   and(): PermissionBuilder<T> {
-    this.builder.addPermission({
-      subject: this.subject,
-      action: this.action,
-      object: this.object,
-      fields: this.fields,
-      conditions: this.conditions,
-      type: this.type,
-    });
+    for (const action of this.actions) {
+      this.builder.addPermission({
+        subject: this.subject,
+        action,
+        object: this.object,
+        fields: this.fields,
+        conditions: this.conditions,
+        type: this.type,
+      });
+    }
     return this.builder;
   }
 }

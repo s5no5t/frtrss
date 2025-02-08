@@ -583,4 +583,104 @@ describe("PermissionBuilder", () => {
     expect(deniedResult).toBe(false);
     expect(allowedResult).toBe(true);
   });
+
+  it("should support multiple actions", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to(["read", "list"])
+      .on("Document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const data = {
+      metadata: { status: "published" },
+    } as Document;
+
+    const readResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    const listResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "list",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    const writeResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "write",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    expect(readResult).toBe(true);
+    expect(listResult).toBe(true);
+    expect(writeResult).toBe(false);
+  });
+
+  it("should support multiple actions with deny rules", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to(["read", "write", "list"])
+      .on("Document")
+      .allFields()
+      .and()
+      .deny<User>({ id: "1", role: "editor" })
+      .to(["write", "delete"])
+      .on("Document")
+      .allFields()
+      .and()
+      .build();
+
+    const data = {} as Document;
+
+    const readResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    const listResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "list",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    const writeResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "write",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    const deleteResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "delete",
+      object: "Document",
+      field: "content",
+      data,
+    });
+
+    expect(readResult).toBe(true);
+    expect(listResult).toBe(true);
+    expect(writeResult).toBe(false);
+    expect(deleteResult).toBe(false);
+  });
 });
