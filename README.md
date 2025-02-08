@@ -83,6 +83,10 @@ This approach allows for more dynamic and fine-grained access control compared t
 * more explicit about field-level permissions
 * zod schema validation
 
+## API Documentation
+
+See [API.md](./doc/API.md).
+
 ## Development
 
 ```bash
