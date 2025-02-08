@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export type Primitive = string | number | boolean | null;
 
 export type DeepPartial<T> = {
@@ -73,7 +71,7 @@ export type PermissionCheck<T> = {
 // Serialization types
 export interface PermissionConditionDTO {
   field: string;
-  operator: Operator;
+  operator: string;
   value: unknown;
 }
 
@@ -90,39 +88,6 @@ export interface PermissionsDTO {
   version: 1;
   rules: PermissionRuleDTO[];
 }
-
-// Zod schema for validation
-export const permissionsDTOSchema = z.object({
-  version: z.literal(1),
-  rules: z.array(
-    z.object({
-      effect: z.enum(["allow", "deny"]),
-      subject: z.unknown(),
-      action: z.string(),
-      object: z.string(),
-      fields: z.array(z.string()),
-      conditions: z
-        .array(
-          z.object({
-            field: z.string(),
-            operator: z.enum([
-              "eq",
-              "ne",
-              "in",
-              "nin",
-              "gt",
-              "gte",
-              "lt",
-              "lte",
-              "size",
-            ]),
-            value: z.unknown(),
-          })
-        )
-        .optional(),
-    })
-  ),
-});
 
 export class PermissionValidationError extends Error {
   constructor(message: string) {

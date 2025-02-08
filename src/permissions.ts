@@ -4,9 +4,9 @@ import {
   PathsToStringProps,
   PermissionsDTO,
   PermissionRuleDTO,
-  permissionsDTOSchema,
   PermissionValidationError,
 } from "./types";
+import { validateDTO } from "./validation";
 
 export class Permissions<T> {
   constructor(private permissions: Array<Permission<T, any>>) {}
@@ -151,11 +151,13 @@ export class Permissions<T> {
     };
   }
 
-  static fromDTO<T>(dto: unknown): Permissions<T> {
+  static fromDTO<T>(dto: unknown, validate = false): Permissions<T> {
     try {
-      const validatedDTO = permissionsDTOSchema.parse(dto);
+      const parsedDTO = validate
+        ? validateDTO(dto, true)
+        : (dto as PermissionsDTO);
 
-      const permissions: Array<Permission<T, any>> = validatedDTO.rules.map(
+      const permissions: Array<Permission<T, any>> = parsedDTO.rules.map(
         (rule) => ({
           type: rule.effect,
           subject: rule.subject,

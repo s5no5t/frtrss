@@ -94,7 +94,7 @@ describe("Permissions Serialization", () => {
       ],
     };
 
-    expect(() => Permissions.fromDTO(invalidDTO)).toThrow(
+    expect(() => Permissions.fromDTO(invalidDTO, true)).toThrow(
       PermissionValidationError
     );
   });
