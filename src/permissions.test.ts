@@ -82,7 +82,7 @@ describe("Permissions Serialization", () => {
     expect(deserializedResult).toBe(true);
   });
 
-  it("should throw PermissionValidationError for invalid DTO", () => {
+  it("should throw PermissionValidationError for invalid DTO when validation is enabled", () => {
     const invalidDTO = {
       version: 1,
       rules: [
@@ -97,6 +97,27 @@ describe("Permissions Serialization", () => {
     expect(() => Permissions.fromDTO(invalidDTO, true)).toThrow(
       PermissionValidationError
     );
+  });
+
+  it("should not throw PermissionValidationError for invalid DTO when validation is disabled", () => {
+    const invalidDTO = {
+      version: 1,
+      rules: [
+        {
+          // Missing required fields
+          effect: "allow",
+          subject: { id: "1" },
+        },
+      ],
+    };
+
+    // Should not throw when validation is disabled (default behavior)
+    const permissions = Permissions.fromDTO(invalidDTO);
+    expect(permissions).toBeInstanceOf(Permissions);
+
+    // Explicitly disabled validation should also not throw
+    const permissions2 = Permissions.fromDTO(invalidDTO, false);
+    expect(permissions2).toBeInstanceOf(Permissions);
   });
 
   it("should handle empty conditions array", () => {
