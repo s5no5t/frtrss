@@ -104,7 +104,7 @@ export class ConditionBuilder<T, S> {
   when<P extends PathsToStringProps<T>>(
     condition: Condition<T, P>
   ): PermissionBuilder<T> {
-    this.conditions.push(condition as Condition<T, PathsToStringProps<T>>);
+    this.conditions.push(condition);
     this.builder.addPermission({
       subject: this.subject,
       action: this.action,
@@ -204,6 +204,8 @@ export class Permissions<T> {
     switch (condition.operator) {
       case "eq":
         return value === condition.value;
+      case "ne":
+        return value !== condition.value;
       case "gt":
         return value > condition.value;
       case "gte":
@@ -224,6 +226,20 @@ export class Permissions<T> {
               : item === condition.value
           )
         );
+      case "nin":
+        return (
+          Array.isArray(value) &&
+          !value.some((item) =>
+            typeof item === "object" && item !== null
+              ? Object.entries(item as Record<string, unknown>).every(
+                  ([k, v]) =>
+                    (condition.value as Record<string, unknown>)[k] === v
+                )
+              : item === condition.value
+          )
+        );
+      case "size":
+        return Array.isArray(value) && value.length === condition.value;
       default:
         return false;
     }

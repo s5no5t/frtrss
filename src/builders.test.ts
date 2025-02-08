@@ -10,12 +10,11 @@ interface User {
 interface Document {
   id: string;
   metadata: {
-    title: string;
-    status: "draft" | "published" | "archived";
-    tags: string[];
+    status: string;
     version: number;
+    title?: string;
   };
-  content: string;
+  content?: string;
   author: {
     id: string;
     name: string;
@@ -96,8 +95,11 @@ describe("PermissionBuilder", () => {
       object: "Document",
       field: "content",
       data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
         reviewers: ["user1", "user2"],
-      } as Document,
+      },
     });
 
     expect(result).toBe(true);
@@ -188,6 +190,135 @@ describe("PermissionBuilder", () => {
       data: {
         metadata: { version: 2 },
       } as Document,
+    });
+
+    expect(deniedResult).toBe(false);
+    expect(allowedResult).toBe(true);
+  });
+
+  it("should support not equal operator", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["content"])
+      .when({
+        field: "metadata.status",
+        operator: "ne",
+        value: "draft",
+      })
+      .build();
+
+    const deniedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "draft", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: [],
+      },
+    });
+
+    const allowedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: [],
+      },
+    });
+
+    expect(deniedResult).toBe(false);
+    expect(allowedResult).toBe(true);
+  });
+
+  it("should support not in operator", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["content"])
+      .when({
+        field: "reviewers",
+        operator: "nin",
+        value: "user3",
+      })
+      .build();
+
+    const deniedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: ["user1", "user2", "user3"],
+      },
+    });
+
+    const allowedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: ["user1", "user2"],
+      },
+    });
+
+    expect(deniedResult).toBe(false);
+    expect(allowedResult).toBe(true);
+  });
+
+  it("should support array size operator", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["content"])
+      .when({
+        field: "reviewers",
+        operator: "size",
+        value: 2,
+      })
+      .build();
+
+    const deniedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: ["user1"],
+      },
+    });
+
+    const allowedResult = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "content",
+      data: {
+        id: "1",
+        metadata: { status: "published", version: 1 },
+        author: { id: "1", name: "John", email: "john@example.com" },
+        reviewers: ["user1", "user2"],
+      },
     });
 
     expect(deniedResult).toBe(false);

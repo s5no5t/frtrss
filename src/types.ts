@@ -24,19 +24,34 @@ export type ValueAtPath<T, P extends string> = P extends keyof T
     : never
   : never;
 
-export type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
-export type ArrayOperator = "in";
+export type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
+export type ArrayOperator = "in" | "nin" | "size";
 export type Operator = ComparisonOperator | ArrayOperator;
 
-export type Condition<T, P extends PathsToStringProps<T>> = {
+export type ArraySizeCondition<T, P extends PathsToStringProps<T>> = {
   field: P;
-  operator: ValueAtPath<T, P> extends Array<any>
-    ? ArrayOperator
-    : ComparisonOperator;
-  value: ValueAtPath<T, P> extends Array<any>
-    ? ValueAtPath<T, P>[number]
-    : ValueAtPath<T, P>;
+  operator: "size";
+  value: number;
 };
+
+export type ArrayValueCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: "in" | "nin";
+  value: ValueAtPath<T, P> extends Array<infer E> ? E : never;
+};
+
+export type ValueCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: ComparisonOperator;
+  value: ValueAtPath<T, P>;
+};
+
+export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<
+  T,
+  P
+> extends Array<any>
+  ? ArraySizeCondition<T, P> | ArrayValueCondition<T, P>
+  : ValueCondition<T, P>;
 
 export type Permission<T, S> = {
   subject: S;
@@ -90,7 +105,17 @@ export const permissionsDTOSchema = z.object({
         .array(
           z.object({
             field: z.string(),
-            operator: z.enum(["eq", "in", "gt", "gte", "lt", "lte"]),
+            operator: z.enum([
+              "eq",
+              "ne",
+              "in",
+              "nin",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "size",
+            ]),
             value: z.unknown(),
           })
         )

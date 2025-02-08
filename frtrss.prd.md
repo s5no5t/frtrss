@@ -32,7 +32,7 @@ type Object = string; // Resource type identifier
 type Field = string; // Dot-notation field path
 type Condition = {
   field: string;
-  operator: "eq" | "in" | "gt" | "gte" | "lt" | "lte";
+  operator: "eq" | "ne" | "in" | "nin" | "gt" | "gte" | "lt" | "lte" | "size";
   value: any;
 };
 ```
@@ -44,6 +44,23 @@ type Condition = {
 - Deny rules override allow rules
 - Field-level permissions require explicit field specification
 - All conditions must be satisfied (AND logic)
+
+### 2.3 Operators
+
+The library supports the following operators:
+
+#### Value Comparison Operators
+- `eq`: Equal to
+- `ne`: Not equal to
+- `gt`: Greater than
+- `gte`: Greater than or equal to
+- `lt`: Less than
+- `lte`: Less than or equal to
+
+#### Array Operators
+- `in`: Check if a value exists in an array
+- `nin`: Check if a value does not exist in an array
+- `size`: Compare the length of an array with a number
 
 ## 3. API Specification
 
@@ -57,16 +74,32 @@ type DeepPartial<T> = {
 };
 
 // Operator types based on value types
-type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
-type ArrayOperator = "in";
+type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
+type ArrayOperator = "in" | "nin" | "size";
 type Operator = ComparisonOperator | ArrayOperator;
 
 // Type-safe condition based on field type
-type Condition<T, K extends keyof T> = {
-  field: K;
-  operator: T[K] extends Array<any> ? ArrayOperator : ComparisonOperator;
-  value: T[K];
+export type ArraySizeCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: "size";
+  value: number;
 };
+
+export type ArrayValueCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: "in" | "nin";
+  value: ValueAtPath<T, P> extends Array<infer E> ? E : never;
+};
+
+export type ValueCondition<T, P extends PathsToStringProps<T>> = {
+  field: P;
+  operator: ComparisonOperator;
+  value: ValueAtPath<T, P>;
+};
+
+export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<T, P> extends Array<any>
+  ? ArraySizeCondition<T, P> | ArrayValueCondition<T, P>
+  : ValueCondition<T, P>;
 
 // Type-safe builder
 class PermissionBuilder<T> {
@@ -94,8 +127,8 @@ class FieldBuilder<T, S, O> {
 }
 
 class ConditionBuilder<T, S, O> {
-  when<K extends keyof T>(
-    condition: Condition<T, K>
+  when<P extends PathsToStringProps<T>>(
+    condition: Condition<T, P>
   ): PermissionBuilder<T>;
   and(): PermissionBuilder<T>;
 }
@@ -145,18 +178,34 @@ interface PermissionsDTO {
 // Zod schema for validation
 const permissionsDTOSchema = z.object({
   version: z.literal(1),
-  rules: z.array(z.object({
-    effect: z.enum(['allow', 'deny']),
-    subject: z.unknown(),
-    action: z.string(),
-    object: z.string(),
-    fields: z.array(z.string()),
-    conditions: z.array(z.object({
-      field: z.string(),
-      operator: z.enum(['eq', 'in', 'gt', 'gte', 'lt', 'lte']),
-      value: z.unknown()
-    })).optional()
-  }))
+  rules: z.array(
+    z.object({
+      effect: z.enum(["allow", "deny"]),
+      subject: z.unknown(),
+      action: z.string(),
+      object: z.string(),
+      fields: z.array(z.string()),
+      conditions: z
+        .array(
+          z.object({
+            field: z.string(),
+            operator: z.enum([
+              "eq",
+              "ne",
+              "in",
+              "nin",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "size",
+            ]),
+            value: z.unknown(),
+          })
+        )
+        .optional(),
+    })
+  ),
 });
 
 // Type-safe permissions class
@@ -189,9 +238,17 @@ The serialization system:
 
 ### 4.2 Conditions
 
-- Equality: `eq`
-- Comparison: `gt`, `gte`, `lt`, `lte`
-- Array operations: `in`
+- Value comparison:
+  - `eq`: Equal to
+  - `ne`: Not equal to
+  - `gt`: Greater than
+  - `gte`: Greater than or equal to
+  - `lt`: Less than
+  - `lte`: Less than or equal to
+- Array operations:
+  - `in`: Check if a value exists in an array
+  - `nin`: Check if a value does not exist in an array
+  - `size`: Compare array length with a number
 - Multiple conditions use AND logic
 
 ### 4.3 Type Safety
@@ -217,7 +274,7 @@ The serialization system:
 
 ## 6. Example Usage
 
-## 6.1 Example with one resource type
+### 6.1 Example with one resource type
 
 ```typescript
 // Example domain types
@@ -245,32 +302,55 @@ interface Document {
 }
 
 const permissions = new PermissionBuilder<Document>()
+  // Basic equality check
   .allow<User>({ id: "1", role: "editor" })
   .to("read")
   .on("Document")
   .fields(["metadata.title", "content", "author.name"])
   .when({
     field: "metadata.status",
-    operator: "eq", // TypeScript ensures this is valid for string type
-    value: "published", // TypeScript ensures this is 'draft' | 'published' | 'archived'
+    operator: "eq",
+    value: "published",
   })
+  // Not equal check
+  .allow<User>({ id: "1", role: "editor" })
+  .to("read")
+  .on("Document")
+  .fields(["metadata.title"])
+  .when({
+    field: "metadata.status",
+    operator: "ne",
+    value: "archived",
+  })
+  // Array membership check
   .allow<User>({ id: "1", role: "admin" })
   .to("update")
   .on("Document")
   .fields(["metadata.tags"])
   .when({
     field: "metadata.tags",
-    operator: "in", // TypeScript ensures this is valid for array type
-    value: ["important"],
+    operator: "in",
+    value: "important",
   })
+  // Array non-membership check
+  .allow<User>({ id: "1", role: "editor" })
+  .to("read")
+  .on("Document")
+  .fields(["content"])
+  .when({
+    field: "metadata.tags",
+    operator: "nin",
+    value: "private",
+  })
+  // Array size check
   .allow<User>({ id: "1", role: "editor" })
   .to("update")
   .on("Document")
   .fields(["metadata.version"])
   .when({
-    field: "metadata.version",
-    operator: "gte", // TypeScript ensures this is valid for number type
-    value: 1,
+    field: "reviewers",
+    operator: "size",
+    value: 2,
   })
   .build();
 
@@ -309,7 +389,7 @@ const canUpdate = permissions.check({
 });
 ```
 
-## 6.2 Example with multiple resource types
+### 6.2 Example with multiple resource types
 
 ```typescript
 // Resource types
@@ -438,7 +518,7 @@ const invalidCheck = permissions.check({
 });
 ```
 
-## 6.3 Example with nested fields
+### 6.3 Example with nested fields
 
 ```typescript
 // Resource type with nested arrays and objects
