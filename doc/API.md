@@ -24,10 +24,14 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   ```
 
 - **`to(action: string): PermissionBuilder<T>`**  
-  Specifies the action that the permission applies to (e.g., "read", "write").  
+  Specifies the action that the permission applies to (e.g., "read", "write"). Can accept either a single action string or an array of actions.  
   _Usage:_  
   ```typescript
+  // Single action
   .to("read")
+
+  // Multiple actions
+  .to(["read", "write", "delete"])
   ```
 
 - **`on(object: string): PermissionBuilder<T>`**  
