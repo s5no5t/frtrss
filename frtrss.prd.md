@@ -11,6 +11,7 @@ A lightweight, type-safe authorization library for JavaScript/TypeScript applica
 - Maintain high performance for hundreds of permission checks per second
 - Offer serialization/deserialization capabilities
 - Default to "deny all" security posture
+- Support both Node.js and browser environments seamlessly
 
 ### 1.2 Non-Goals
 
@@ -20,6 +21,23 @@ A lightweight, type-safe authorization library for JavaScript/TypeScript applica
 - Framework-specific integrations
 - Audit logging
 - CASL compatibility
+
+### 1.3 Environment Support
+
+The library is designed to work seamlessly in both Node.js and browser environments:
+
+- **Node.js Support**
+  - CommonJS (require) via `.js` files
+  - ES Modules (import) via `.mjs` files
+  - TypeScript definitions via `.d.ts` files
+
+- **Browser Support**
+  - ES Modules for modern browsers
+  - Compatible with all major bundlers (webpack, rollup, vite, etc.)
+  - No browser-specific APIs or dependencies
+  - Tree-shakeable for optimal bundle size
+
+The package provides appropriate entry points for each environment through the `exports` field in package.json, ensuring the correct version is used based on the consumer's environment.
 
 ## 2. Core Concepts
 

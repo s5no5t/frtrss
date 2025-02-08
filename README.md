@@ -9,12 +9,24 @@ A lightweight, type-safe authorization library for JavaScript/TypeScript applica
 - High performance for hundreds of permission checks per second
 - Serialization/deserialization capabilities
 - Default "deny all" security posture
+- Works seamlessly in both Node.js and browser environments
+- Tree-shakeable for optimal bundle size
 
 ## Installation
 
 ```bash
 npm install frtrss
 ```
+
+## Environment Support
+
+frtrss is designed to work in both Node.js and browser environments out of the box:
+
+- **Node.js**: Supports both CommonJS (`require`) and ES Modules (`import`)
+- **Browsers**: Ships as ES Modules, compatible with all major bundlers
+- **TypeScript**: Full type definitions included
+
+No additional configuration is needed - the package automatically uses the right format for your environment.
 
 ## Basic Usage
 
