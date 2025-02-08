@@ -21,7 +21,7 @@ export class PermissionBuilder<T> {
   }
 }
 
-export class ActionBuilder<T, S> {
+class ActionBuilder<T, S> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
@@ -39,7 +39,7 @@ export class ActionBuilder<T, S> {
   }
 }
 
-export class ObjectBuilder<T, S> {
+class ObjectBuilder<T, S> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
@@ -58,7 +58,7 @@ export class ObjectBuilder<T, S> {
   }
 }
 
-export class FieldBuilder<T, S> {
+class FieldBuilder<T, S> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
@@ -83,7 +83,7 @@ export class FieldBuilder<T, S> {
   }
 }
 
-export class ConditionBuilder<T, S> {
+class ConditionBuilder<T, S> {
   private conditions: Array<Condition<T, PathsToStringProps<T>>> = [];
 
   constructor(
