@@ -25,7 +25,7 @@ export type ValueAtPath<T, P extends string> = P extends keyof T
   : never;
 
 export type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
-export type ArrayOperator = "contains";
+export type ArrayOperator = "in";
 export type Operator = ComparisonOperator | ArrayOperator;
 
 export type Condition<T, P extends PathsToStringProps<T>> = {
@@ -90,7 +90,7 @@ export const permissionsDTOSchema = z.object({
         .array(
           z.object({
             field: z.string(),
-            operator: z.enum(["eq", "contains", "gt", "gte", "lt", "lte"]),
+            operator: z.enum(["eq", "in", "gt", "gte", "lt", "lte"]),
             value: z.unknown(),
           })
         )

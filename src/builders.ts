@@ -212,7 +212,7 @@ export class Permissions<T> {
         return value < condition.value;
       case "lte":
         return value <= condition.value;
-      case "contains":
+      case "in":
         return (
           Array.isArray(value) &&
           value.some((item) =>

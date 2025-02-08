@@ -32,7 +32,7 @@ type Object = string; // Resource type identifier
 type Field = string; // Dot-notation field path
 type Condition = {
   field: string;
-  operator: "eq" | "contains" | "gt" | "gte" | "lt" | "lte";
+  operator: "eq" | "in" | "gt" | "gte" | "lt" | "lte";
   value: any;
 };
 ```
@@ -58,7 +58,7 @@ type DeepPartial<T> = {
 
 // Operator types based on value types
 type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
-type ArrayOperator = "contains";
+type ArrayOperator = "in";
 type Operator = ComparisonOperator | ArrayOperator;
 
 // Type-safe condition based on field type
@@ -153,7 +153,7 @@ const permissionsDTOSchema = z.object({
     fields: z.array(z.string()),
     conditions: z.array(z.object({
       field: z.string(),
-      operator: z.enum(['eq', 'contains', 'gt', 'gte', 'lt', 'lte']),
+      operator: z.enum(['eq', 'in', 'gt', 'gte', 'lt', 'lte']),
       value: z.unknown()
     })).optional()
   }))
@@ -191,7 +191,7 @@ The serialization system:
 
 - Equality: `eq`
 - Comparison: `gt`, `gte`, `lt`, `lte`
-- Array operations: `contains`
+- Array operations: `in`
 - Multiple conditions use AND logic
 
 ### 4.3 Type Safety
@@ -260,7 +260,7 @@ const permissions = new PermissionBuilder<Document>()
   .fields(["metadata.tags"])
   .when({
     field: "metadata.tags",
-    operator: "contains", // TypeScript ensures this is valid for array type
+    operator: "in", // TypeScript ensures this is valid for array type
     value: ["important"],
   })
   .allow<User>({ id: "1", role: "editor" })
@@ -374,7 +374,7 @@ const permissions = new PermissionBuilder<Resource>()
   .fields<Project>(["name", "members.*.userId", "settings.allowComments"])
   .when({
     field: "members",
-    operator: "contains",
+    operator: "in",
     value: { userId: "1", role: "member" },
   })
 

@@ -77,7 +77,7 @@ describe("PermissionBuilder", () => {
     expect(result).toBe(false);
   });
 
-  it("should support array contains operator", () => {
+  it("should support array in operator", () => {
     const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
@@ -85,7 +85,7 @@ describe("PermissionBuilder", () => {
       .fields(["content"])
       .when({
         field: "reviewers",
-        operator: "contains",
+        operator: "in",
         value: "user1",
       })
       .build();
