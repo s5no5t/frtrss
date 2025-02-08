@@ -1,14 +1,16 @@
 # frtrss
 
-A lightweight, type-safe authorization library for JavaScript/TypeScript applications that provides a flexible permission management system with field-level granularity.
+![frtrss logo](logo.png)
+
+A type-safe authorization library for TypeScript applications.
 
 ## Features
 
 - Type-safe, intuitive API for defining permissions
 - Field-level permissions with nested path support
-- High performance for hundreds of permission checks per second
-- Serialization/deserialization capabilities
-- Default "deny all" security posture
+- Allow and deny permissions
+- Serialization/deserialization support
+- Safe default "deny all"
 - Full browser and Node.js compatibility with CommonJS and ES Modules support
 - Tree-shakeable for optimal bundle size
 - Complete TypeScript definitions
