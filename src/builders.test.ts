@@ -127,6 +127,84 @@ describe("PermissionBuilder", () => {
     expect(result).toBe(false);
   });
 
+  it("should deny access when action doesn't match", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "write",
+      object: "Document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when action is a substring of allowed action", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("update")
+      .on("Document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "up",
+      object: "Document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when action is a superstring of allowed action", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "readwrite",
+      object: "Document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
   it("should deny access when conditions are not met", () => {
     const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
