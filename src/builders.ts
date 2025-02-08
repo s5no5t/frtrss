@@ -1,4 +1,12 @@
-import { Permission, TypedCondition, PathsToStringProps } from "./types";
+import {
+  Permission,
+  TypedCondition,
+  PathsToStringProps,
+  PermissionsDTO,
+  PermissionRuleDTO,
+  permissionsDTOSchema,
+  PermissionValidationError,
+} from "./types";
 
 export class TypedPermissionBuilder<T> {
   private permissions: Array<Permission<T, any>> = [];
@@ -229,5 +237,60 @@ export class TypedPermissions<T> {
       }
       return current[part];
     }, obj);
+  }
+
+  toDTO(): PermissionsDTO {
+    const rules: PermissionRuleDTO[] = this.permissions.map((permission) => ({
+      effect: permission.type,
+      subject: permission.subject,
+      action: permission.action,
+      object: permission.object,
+      fields: permission.fields,
+      conditions:
+        permission.conditions.length > 0
+          ? permission.conditions.map((condition) => ({
+              field: String(condition.field),
+              operator: condition.operator,
+              value: condition.value,
+            }))
+          : undefined,
+    }));
+
+    return {
+      version: 1,
+      rules,
+    };
+  }
+
+  static fromDTO<T>(dto: unknown): TypedPermissions<T> {
+    const validationResult = permissionsDTOSchema.safeParse(dto);
+    if (!validationResult.success) {
+      throw new PermissionValidationError(
+        `Invalid permissions DTO: ${validationResult.error.message}`
+      );
+    }
+
+    const validatedDTO = validationResult.data;
+    const permissions: Array<Permission<T, any>> = validatedDTO.rules.map(
+      (rule) => ({
+        type: rule.effect,
+        subject: rule.subject,
+        action: rule.action,
+        object: rule.object,
+        fields: rule.fields,
+        conditions:
+          rule.conditions?.map((condition) => {
+            // Cast the condition to the appropriate type
+            // This is safe because we've validated the DTO structure
+            return {
+              field: condition.field,
+              operator: condition.operator,
+              value: condition.value,
+            } as TypedCondition<T, PathsToStringProps<T>>;
+          }) ?? [],
+      })
+    );
+
+    return new TypedPermissions<T>(permissions);
   }
 }

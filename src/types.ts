@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type Primitive = string | number | boolean | null;
 
 export type DeepPartial<T> = {
@@ -28,10 +30,12 @@ export type Operator = ComparisonOperator | ArrayOperator;
 
 export type TypedCondition<T, P extends PathsToStringProps<T>> = {
   field: P;
-  operator: ValueAtPath<T, P> extends Array<infer U>
+  operator: ValueAtPath<T, P> extends Array<any>
     ? ArrayOperator
     : ComparisonOperator;
-  value: ValueAtPath<T, P> extends Array<infer U> ? U : ValueAtPath<T, P>;
+  value: ValueAtPath<T, P> extends Array<any>
+    ? ValueAtPath<T, P>[number]
+    : ValueAtPath<T, P>;
 };
 
 export type Permission<T, S> = {
@@ -50,3 +54,54 @@ export type PermissionCheck<T> = {
   field: string;
   data: DeepPartial<T>;
 };
+
+// Serialization types
+export interface PermissionConditionDTO {
+  field: string;
+  operator: Operator;
+  value: unknown;
+}
+
+export interface PermissionRuleDTO {
+  effect: "allow" | "deny";
+  subject: unknown;
+  action: string;
+  object: string;
+  fields: string[];
+  conditions?: PermissionConditionDTO[];
+}
+
+export interface PermissionsDTO {
+  version: 1;
+  rules: PermissionRuleDTO[];
+}
+
+// Zod schema for validation
+export const permissionsDTOSchema = z.object({
+  version: z.literal(1),
+  rules: z.array(
+    z.object({
+      effect: z.enum(["allow", "deny"]),
+      subject: z.unknown(),
+      action: z.string(),
+      object: z.string(),
+      fields: z.array(z.string()),
+      conditions: z
+        .array(
+          z.object({
+            field: z.string(),
+            operator: z.enum(["eq", "contains", "gt", "gte", "lt", "lte"]),
+            value: z.unknown(),
+          })
+        )
+        .optional(),
+    })
+  ),
+});
+
+export class PermissionValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PermissionValidationError";
+  }
+}

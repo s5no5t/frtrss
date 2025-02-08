@@ -120,13 +120,61 @@ class TypedPermissions<T> {
 
 ### 3.3 Serialization
 
-```typescript
-// To JSON
-const json = permissions.toJSON();
+The library provides format-agnostic serialization support through a DTO (Data Transfer Object) interface:
 
-// From JSON
-const permissions = Permissions.fromJSON(json);
+```typescript
+// Core DTO types
+interface PermissionRuleDTO {
+  effect: 'allow' | 'deny';
+  subject: unknown;
+  action: string;
+  object: string;
+  fields: string[];
+  conditions?: Array<{
+    field: string;
+    operator: Operator;
+    value: unknown;
+  }>;
+}
+
+interface PermissionsDTO {
+  version: 1;
+  rules: PermissionRuleDTO[];
+}
+
+// Zod schema for validation
+const permissionsDTOSchema = z.object({
+  version: z.literal(1),
+  rules: z.array(z.object({
+    effect: z.enum(['allow', 'deny']),
+    subject: z.unknown(),
+    action: z.string(),
+    object: z.string(),
+    fields: z.array(z.string()),
+    conditions: z.array(z.object({
+      field: z.string(),
+      operator: z.enum(['eq', 'contains', 'gt', 'gte', 'lt', 'lte']),
+      value: z.unknown()
+    })).optional()
+  }))
+});
+
+// Type-safe permissions class
+class TypedPermissions<T> {
+  // Convert permissions to DTO
+  toDTO(): PermissionsDTO;
+
+  // Create permissions from DTO
+  static fromDTO<T>(dto: unknown): TypedPermissions<T>;
+}
 ```
+
+The serialization system:
+- Uses a version field to support future schema changes
+- Is transport format agnostic (can be used with JSON, YAML, etc.)
+- Validates DTOs using Zod schemas
+- Throws `PermissionValidationError` for invalid DTOs
+- Preserves type safety when deserializing
 
 ## 4. Features
 
