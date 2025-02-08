@@ -1,0 +1,11 @@
+---
+description: After every code change, run typechecks, lint, and tests
+globs: *.ts
+---
+
+When any code was changed, make sure that
+
+* typechecks run
+* lint runs
+* tests run
+
