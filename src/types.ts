@@ -28,7 +28,7 @@ export type ComparisonOperator = "eq" | "gt" | "gte" | "lt" | "lte";
 export type ArrayOperator = "contains";
 export type Operator = ComparisonOperator | ArrayOperator;
 
-export type TypedCondition<T, P extends PathsToStringProps<T>> = {
+export type Condition<T, P extends PathsToStringProps<T>> = {
   field: P;
   operator: ValueAtPath<T, P> extends Array<any>
     ? ArrayOperator
@@ -43,7 +43,7 @@ export type Permission<T, S> = {
   action: string;
   object: string;
   fields: string[];
-  conditions: Array<TypedCondition<T, PathsToStringProps<T>>>;
+  conditions: Array<Condition<T, PathsToStringProps<T>>>;
   type: "allow" | "deny";
 };
 

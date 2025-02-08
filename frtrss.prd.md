@@ -62,42 +62,42 @@ type ArrayOperator = "contains";
 type Operator = ComparisonOperator | ArrayOperator;
 
 // Type-safe condition based on field type
-type TypedCondition<T, K extends keyof T> = {
+type Condition<T, K extends keyof T> = {
   field: K;
   operator: T[K] extends Array<any> ? ArrayOperator : ComparisonOperator;
   value: T[K];
 };
 
 // Type-safe builder
-class TypedPermissionBuilder<T> {
-  allow<S>(subject: S): TypedActionBuilder<T, S>;
-  deny<S>(subject: S): TypedActionBuilder<T, S>;
-  build(): TypedPermissions<T>;
+class PermissionBuilder<T> {
+  allow<S>(subject: S): ActionBuilder<T, S>;
+  deny<S>(subject: S): ActionBuilder<T, S>;
+  build(): Permissions<T>;
 }
 
-class TypedActionBuilder<T, S> {
-  to(action: string): TypedObjectBuilder<T, S>;
+class ActionBuilder<T, S> {
+  to(action: string): ObjectBuilder<T, S>;
 }
 
-class TypedObjectBuilder<T, S> {
-  on<O extends string>(object: O): TypedFieldBuilder<T, S, O>;
+class ObjectBuilder<T, S> {
+  on<O extends string>(object: O): FieldBuilder<T, S, O>;
 }
 
-class TypedFieldBuilder<T, S, O> {
+class FieldBuilder<T, S, O> {
   // Type-safe field paths using dot notation
   fields<K extends keyof T>(
     fields: Array<
       K | `${string & K}.${string}` | `${string & K}.*.${string}` | "*"
     >
-  ): TypedConditionBuilder<T, S, O>;
-  allFields(): TypedConditionBuilder<T, S, O>;
+  ): ConditionBuilder<T, S, O>;
+  allFields(): ConditionBuilder<T, S, O>;
 }
 
-class TypedConditionBuilder<T, S, O> {
+class ConditionBuilder<T, S, O> {
   when<K extends keyof T>(
-    condition: TypedCondition<T, K>
-  ): TypedPermissionBuilder<T>;
-  and(): TypedPermissionBuilder<T>;
+    condition: Condition<T, K>
+  ): PermissionBuilder<T>;
+  and(): PermissionBuilder<T>;
 }
 ```
 
@@ -105,7 +105,7 @@ class TypedConditionBuilder<T, S, O> {
 
 ```typescript
 // Type-safe permissions class
-class TypedPermissions<T> {
+class Permissions<T> {
   check(params: {
     subject: any;
     action: string;
@@ -160,12 +160,12 @@ const permissionsDTOSchema = z.object({
 });
 
 // Type-safe permissions class
-class TypedPermissions<T> {
+class Permissions<T> {
   // Convert permissions to DTO
   toDTO(): PermissionsDTO;
 
   // Create permissions from DTO
-  static fromDTO<T>(dto: unknown): TypedPermissions<T>;
+  static fromDTO<T>(dto: unknown): Permissions<T>;
 }
 ```
 
@@ -244,7 +244,7 @@ interface Document {
   lastModified: Date;
 }
 
-const permissions = new TypedPermissionBuilder<Document>()
+const permissions = new PermissionBuilder<Document>()
   .allow<User>({ id: "1", role: "editor" })
   .to("read")
   .on("Document")
@@ -355,7 +355,7 @@ type ResourceFields<T extends Resource> = T extends Document
   : never;
 
 // Usage example
-const permissions = new TypedPermissionBuilder<Resource>()
+const permissions = new PermissionBuilder<Resource>()
   // Document permissions
   .allow<User>({ id: "1", role: "user" })
   .to("read")
@@ -485,7 +485,7 @@ interface User {
 }
 
 // Permission builder usage with wildcards
-const permissions = new TypedPermissionBuilder<BlogPost>()
+const permissions = new PermissionBuilder<BlogPost>()
   // Regular user permissions
   .allow<User>({ id: "1", role: "user" })
   .to("read")

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TypedPermissionBuilder, TypedPermissions } from "./builders";
+import { PermissionBuilder, Permissions } from "./builders";
 import { PermissionValidationError } from "./types";
 
 interface User {
@@ -24,9 +24,9 @@ interface Document {
   reviewers: string[];
 }
 
-describe("TypedPermissionBuilder", () => {
+describe("PermissionBuilder", () => {
   it("should allow access when conditions are met", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -52,7 +52,7 @@ describe("TypedPermissionBuilder", () => {
   });
 
   it("should deny access when conditions are not met", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -78,7 +78,7 @@ describe("TypedPermissionBuilder", () => {
   });
 
   it("should support array contains operator", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -104,7 +104,7 @@ describe("TypedPermissionBuilder", () => {
   });
 
   it("should support wildcard fields", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "admin" })
       .to("read")
       .on("Document")
@@ -124,7 +124,7 @@ describe("TypedPermissionBuilder", () => {
   });
 
   it("should support deny rules overriding allow rules", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -158,7 +158,7 @@ describe("TypedPermissionBuilder", () => {
   });
 
   it("should support numeric comparisons", () => {
-    const permissions = new TypedPermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -195,9 +195,9 @@ describe("TypedPermissionBuilder", () => {
   });
 });
 
-describe("TypedPermissions Serialization", () => {
+describe("Permissions Serialization", () => {
   it("should serialize and deserialize permissions correctly", () => {
-    const originalPermissions = new TypedPermissionBuilder<Document>()
+    const originalPermissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("Document")
@@ -227,7 +227,7 @@ describe("TypedPermissions Serialization", () => {
       ],
     });
 
-    const deserializedPermissions = TypedPermissions.fromDTO<Document>(dto);
+    const deserializedPermissions = Permissions.fromDTO<Document>(dto);
     const testData = {
       metadata: { status: "published" },
     } as Document;
@@ -265,13 +265,13 @@ describe("TypedPermissions Serialization", () => {
       ],
     };
 
-    expect(() => TypedPermissions.fromDTO(invalidDTO)).toThrow(
+    expect(() => Permissions.fromDTO(invalidDTO)).toThrow(
       PermissionValidationError
     );
   });
 
   it("should handle empty conditions array", () => {
-    const originalPermissions = new TypedPermissionBuilder<Document>()
+    const originalPermissions = new PermissionBuilder<Document>()
       .allow<User>({ id: "1", role: "admin" })
       .to("read")
       .on("Document")
@@ -282,7 +282,7 @@ describe("TypedPermissions Serialization", () => {
     const dto = originalPermissions.toDTO();
     expect(dto.rules[0].conditions).toBeUndefined();
 
-    const deserializedPermissions = TypedPermissions.fromDTO<Document>(dto);
+    const deserializedPermissions = Permissions.fromDTO<Document>(dto);
     const result = deserializedPermissions.check({
       subject: { id: "1", role: "admin" },
       action: "read",

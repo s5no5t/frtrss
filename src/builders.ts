@@ -1,6 +1,6 @@
 import {
   Permission,
-  TypedCondition,
+  Condition,
   PathsToStringProps,
   PermissionsDTO,
   PermissionRuleDTO,
@@ -8,35 +8,35 @@ import {
   PermissionValidationError,
 } from "./types";
 
-export class TypedPermissionBuilder<T> {
+export class PermissionBuilder<T> {
   private permissions: Array<Permission<T, any>> = [];
 
-  allow<S>(subject: S): TypedActionBuilder<T, S> {
-    return new TypedActionBuilder<T, S>(this, subject, "allow");
+  allow<S>(subject: S): ActionBuilder<T, S> {
+    return new ActionBuilder<T, S>(this, subject, "allow");
   }
 
-  deny<S>(subject: S): TypedActionBuilder<T, S> {
-    return new TypedActionBuilder<T, S>(this, subject, "deny");
+  deny<S>(subject: S): ActionBuilder<T, S> {
+    return new ActionBuilder<T, S>(this, subject, "deny");
   }
 
   addPermission(permission: Permission<T, any>): void {
     this.permissions.push(permission);
   }
 
-  build(): TypedPermissions<T> {
-    return new TypedPermissions<T>(this.permissions);
+  build(): Permissions<T> {
+    return new Permissions<T>(this.permissions);
   }
 }
 
-export class TypedActionBuilder<T, S> {
+export class ActionBuilder<T, S> {
   constructor(
-    private builder: TypedPermissionBuilder<T>,
+    private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny"
   ) {}
 
-  to(action: string): TypedObjectBuilder<T, S> {
-    return new TypedObjectBuilder<T, S>(
+  to(action: string): ObjectBuilder<T, S> {
+    return new ObjectBuilder<T, S>(
       this.builder,
       this.subject,
       this.type,
@@ -45,16 +45,16 @@ export class TypedActionBuilder<T, S> {
   }
 }
 
-export class TypedObjectBuilder<T, S> {
+export class ObjectBuilder<T, S> {
   constructor(
-    private builder: TypedPermissionBuilder<T>,
+    private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
     private action: string
   ) {}
 
-  on(object: string): TypedFieldBuilder<T, S> {
-    return new TypedFieldBuilder<T, S>(
+  on(object: string): FieldBuilder<T, S> {
+    return new FieldBuilder<T, S>(
       this.builder,
       this.subject,
       this.type,
@@ -64,17 +64,17 @@ export class TypedObjectBuilder<T, S> {
   }
 }
 
-export class TypedFieldBuilder<T, S> {
+export class FieldBuilder<T, S> {
   constructor(
-    private builder: TypedPermissionBuilder<T>,
+    private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
     private action: string,
     private object: string
   ) {}
 
-  fields(fields: Array<string>): TypedConditionBuilder<T, S> {
-    return new TypedConditionBuilder<T, S>(
+  fields(fields: Array<string>): ConditionBuilder<T, S> {
+    return new ConditionBuilder<T, S>(
       this.builder,
       this.subject,
       this.type,
@@ -84,16 +84,16 @@ export class TypedFieldBuilder<T, S> {
     );
   }
 
-  allFields(): TypedConditionBuilder<T, S> {
+  allFields(): ConditionBuilder<T, S> {
     return this.fields(["*"]);
   }
 }
 
-export class TypedConditionBuilder<T, S> {
-  private conditions: Array<TypedCondition<T, PathsToStringProps<T>>> = [];
+export class ConditionBuilder<T, S> {
+  private conditions: Array<Condition<T, PathsToStringProps<T>>> = [];
 
   constructor(
-    private builder: TypedPermissionBuilder<T>,
+    private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
     private action: string,
@@ -102,9 +102,9 @@ export class TypedConditionBuilder<T, S> {
   ) {}
 
   when<P extends PathsToStringProps<T>>(
-    condition: TypedCondition<T, P>
-  ): TypedPermissionBuilder<T> {
-    this.conditions.push(condition as TypedCondition<T, PathsToStringProps<T>>);
+    condition: Condition<T, P>
+  ): PermissionBuilder<T> {
+    this.conditions.push(condition as Condition<T, PathsToStringProps<T>>);
     this.builder.addPermission({
       subject: this.subject,
       action: this.action,
@@ -116,7 +116,7 @@ export class TypedConditionBuilder<T, S> {
     return this.builder;
   }
 
-  and(): TypedPermissionBuilder<T> {
+  and(): PermissionBuilder<T> {
     this.builder.addPermission({
       subject: this.subject,
       action: this.action,
@@ -129,7 +129,7 @@ export class TypedConditionBuilder<T, S> {
   }
 }
 
-export class TypedPermissions<T> {
+export class Permissions<T> {
   constructor(private permissions: Array<Permission<T, any>>) {}
 
   check(params: {
@@ -196,7 +196,7 @@ export class TypedPermissions<T> {
   }
 
   private evaluateCondition(
-    condition: TypedCondition<T, PathsToStringProps<T>>,
+    condition: Condition<T, PathsToStringProps<T>>,
     data: T
   ): boolean {
     const value = this.getFieldValue(data, condition.field);
@@ -247,13 +247,7 @@ export class TypedPermissions<T> {
       object: permission.object,
       fields: permission.fields,
       conditions:
-        permission.conditions.length > 0
-          ? permission.conditions.map((condition) => ({
-              field: String(condition.field),
-              operator: condition.operator,
-              value: condition.value,
-            }))
-          : undefined,
+        permission.conditions.length > 0 ? permission.conditions : undefined,
     }));
 
     return {
@@ -262,35 +256,33 @@ export class TypedPermissions<T> {
     };
   }
 
-  static fromDTO<T>(dto: unknown): TypedPermissions<T> {
-    const validationResult = permissionsDTOSchema.safeParse(dto);
-    if (!validationResult.success) {
+  static fromDTO<T>(dto: unknown): Permissions<T> {
+    try {
+      const validatedDTO = permissionsDTOSchema.parse(dto);
+
+      const permissions: Array<Permission<T, any>> = validatedDTO.rules.map(
+        (rule) => ({
+          type: rule.effect,
+          subject: rule.subject,
+          action: rule.action,
+          object: rule.object,
+          fields: rule.fields,
+          conditions: (rule.conditions || []).map(
+            (condition) =>
+              ({
+                field: condition.field,
+                operator: condition.operator,
+                value: condition.value,
+              } as Condition<T, PathsToStringProps<T>>)
+          ),
+        })
+      );
+
+      return new Permissions<T>(permissions);
+    } catch (error) {
       throw new PermissionValidationError(
-        `Invalid permissions DTO: ${validationResult.error.message}`
+        error instanceof Error ? error.message : "Invalid permissions DTO"
       );
     }
-
-    const validatedDTO = validationResult.data;
-    const permissions: Array<Permission<T, any>> = validatedDTO.rules.map(
-      (rule) => ({
-        type: rule.effect,
-        subject: rule.subject,
-        action: rule.action,
-        object: rule.object,
-        fields: rule.fields,
-        conditions:
-          rule.conditions?.map((condition) => {
-            // Cast the condition to the appropriate type
-            // This is safe because we've validated the DTO structure
-            return {
-              field: condition.field,
-              operator: condition.operator,
-              value: condition.value,
-            } as TypedCondition<T, PathsToStringProps<T>>;
-          }) ?? [],
-      })
-    );
-
-    return new TypedPermissions<T>(permissions);
   }
 }

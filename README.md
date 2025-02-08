@@ -19,7 +19,7 @@ npm install frtrss
 ## Basic Usage
 
 ```typescript
-import { TypedPermissionBuilder } from "frtrss";
+import { PermissionBuilder } from "frtrss";
 
 interface User {
   id: string;
@@ -35,7 +35,7 @@ interface Document {
   content: string;
 }
 
-const permissions = new TypedPermissionBuilder<Document>()
+const permissions = new PermissionBuilder<Document>()
   .allow<User>({ id: "1", role: "editor" })
   .to("read")
   .on("Document")
