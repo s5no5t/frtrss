@@ -23,6 +23,13 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   .allow({ id: "1", role: "editor" })
   ```
 
+- **`deny<S>(subject: S): PermissionBuilder<T>`**  
+  Registers a subject that is explicitly denied permission. Deny rules take precedence over allow rules.  
+  _Usage:_  
+  ```typescript
+  .deny({ id: "2", role: "user" })
+  ```
+
 - **`to(action: string): PermissionBuilder<T>`**  
   Specifies the action that the permission applies to (e.g., "read", "write"). Can accept either a single action string or an array of actions.  
   _Usage:_  
