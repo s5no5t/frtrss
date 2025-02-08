@@ -7,7 +7,7 @@
    - [Field-level Permission](#2-field-level-permission)
    - [Attribute-Based Access Control (ABAC)](#3-attribute-based-access-control-abac)
    - [Multiple Subject Types](#4-multiple-subject-types)
-3. [Conclusion](#conclusion)
+   - [Storing and Loading Permissions](#5-storing-and-loading-permissions)
 
 ## Public API Methods
 
@@ -316,3 +316,124 @@ This example demonstrates how to handle different types of subjects with distinc
 - Service accounts are given read-only access across all departments when running in production
 - Each subject type has its own set of attributes that can be used in permission rules
 - The permission builder can handle multiple subject types in a type-safe manner using TypeScript generics
+
+### 5. Storing and Loading Permissions
+
+The library provides a robust DTO (Data Transfer Object) system for serializing and deserializing permissions, making it easy to store and load permission configurations from various storage systems like databases, files, or configuration services.
+
+**Example Code:**
+```typescript
+import { PermissionBuilder, Permissions } from "frtrss";
+
+interface Document {
+  id: string;
+  metadata: {
+    title: string;
+    status: "draft" | "published" | "archived";
+    department: string;
+  };
+  content: string;
+}
+
+// Create permissions using the builder
+const permissions = new PermissionBuilder<Document>()
+  .allow({ id: "1", role: "editor" })
+  .to("read")
+  .on("Document")
+  .fields(["metadata.title", "content"])
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "published",
+  })
+  .build();
+
+// Serialize permissions to DTO format
+const dto = permissions.toDTO();
+
+// Example: Store the DTO as JSON in a file or database
+const jsonString = JSON.stringify(dto);
+console.log("Serialized permissions:", jsonString);
+
+// Later: Load and deserialize the permissions
+const loadedDTO = JSON.parse(jsonString);
+
+// Create a new Permissions instance from the DTO
+// Optional validation can be enabled by passing true as the second argument
+const loadedPermissions = Permissions.fromDTO<Document>(loadedDTO, true);
+
+// Use the loaded permissions
+const canRead = loadedPermissions.check({
+  subject: { id: "1", role: "editor" },
+  action: "read",
+  object: "Document",
+  field: "content",
+  data: {
+    metadata: { status: "published" }
+  }
+});
+
+console.log(`Can read document: ${canRead}`); // true
+```
+
+**Key Features of the DTO System:**
+
+1. **Version Control**
+   - DTOs include a version field to support future schema changes
+   - Current version is 1
+   ```typescript
+   interface PermissionsDTO {
+     version: 1;
+     rules: PermissionRuleDTO[];
+   }
+   ```
+
+2. **Validation Support**
+   - Built-in validation using Zod schema
+   - Optional validation when deserializing
+   - Throws `PermissionValidationError` for invalid DTOs
+   ```typescript
+   // With validation enabled
+   const validated = Permissions.fromDTO(dto, true);
+   
+   // Without validation (no Zod)
+   const unvalidated = Permissions.fromDTO(dto);
+   ```
+
+3. **Transport Format Agnostic**
+   - DTOs can be serialized to any format (JSON, YAML, etc.)
+   - Preserves all permission rules, conditions, and metadata
+   ```typescript
+   interface PermissionRuleDTO {
+     effect: "allow" | "deny";
+     subject: unknown;
+     action: string;
+     object: string;
+     fields: string[];
+     conditions?: Array<{
+       field: string;
+       operator: string;
+       value: unknown;
+     }>;
+   }
+   ```
+
+4. **Type Safety**
+   - Maintains type information during deserialization
+   - Generic type parameter ensures type safety when using loaded permissions
+   ```typescript
+   const typedPermissions = Permissions.fromDTO<Document>(dto);
+   ```
+
+5. **Error Handling**
+   - Clear error messages for validation failures
+   - Graceful fallback to basic validation when Zod is not available
+   ```typescript
+   try {
+     const permissions = Permissions.fromDTO(dto, true);
+   } catch (error) {
+     if (error instanceof PermissionValidationError) {
+       console.error("Invalid permission configuration:", error.message);
+     }
+   }
+   ```
