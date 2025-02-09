@@ -104,6 +104,16 @@ type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
+// Resource type mapping - supports both record and discriminated union types
+type ResourceTypeMap<T> = T extends { type: string }
+  ? Record<T["type"], T>
+  : T extends Record<string, any>
+  ? T
+  : never;
+
+// Helper type to extract the object type from a discriminator
+type ObjectType<T, D extends string> = Extract<T, { type: D }>;
+
 // Operator types based on value types
 type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
 type ArrayOperator = "in" | "nin" | "size";
@@ -132,7 +142,7 @@ export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<T, P> ex
   ? ArraySizeCondition<T, P> | ArrayValueCondition<T, P>
   : ValueCondition<T, P>;
 
-// Type-safe builder
+// Type-safe builder for multiple resource types
 class PermissionBuilder<T> {
   allow<S>(subject: S): ActionBuilder<T, S>;
   deny<S>(subject: S): ActionBuilder<T, S>;
@@ -145,7 +155,10 @@ class ActionBuilder<T, S> {
 }
 
 class ObjectBuilder<T, S> {
-  on<O extends string>(object: O): FieldBuilder<T, S, O>;
+  // Supports both record keys and discriminator values
+  on<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>>(
+    object: D
+  ): FieldBuilder<T extends { type: string } ? ObjectType<T, D> : ResourceTypeMap<T>[D], S, D>;
 }
 
 class FieldBuilder<T, S, O> {
@@ -171,15 +184,24 @@ class ConditionBuilder<T, S, O> {
 ```typescript
 // Type-safe permissions class
 class Permissions<T> {
-  check(params: {
+  check<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>>(params: {
     subject: any;
     action: string;
-    object: string;
+    object: D;
     field: string;
-    data: DeepPartial<T>;
+    data: T extends { type: string }
+      ? DeepPartial<ObjectType<T, D>>
+      : DeepPartial<ResourceTypeMap<T>[D]>;
   }): boolean;
 
-  checkObject<S>(subject: S, action: string, object: string, data: T): boolean;
+  checkObject<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>, S>(
+    subject: S,
+    action: string,
+    object: D,
+    data: T extends { type: string }
+      ? ObjectType<T, D>
+      : ResourceTypeMap<T>[D]
+  ): boolean;
 }
 ```
 
@@ -241,12 +263,12 @@ const permissionsDTOSchema = z.object({
 });
 
 // Type-safe permissions class
-class Permissions<T> {
+class Permissions<TMap extends ResourceTypeMap<T>> {
   // Convert permissions to DTO
   toDTO(): PermissionsDTO;
 
   // Create permissions from DTO
-  static fromDTO<T>(dto: unknown): Permissions<T>;
+  static fromDTO<TMap extends ResourceTypeMap<T>>(dto: unknown): Permissions<TMap>;
 }
 ```
 
@@ -835,4 +857,79 @@ This example shows how to:
 ```typescript
 console.log(`Application user can write: ${canUserWrite}`);
 console.log(`Service account can read: ${canServiceRead}`);
+```
+
+### 3.4 Example Usage with Record Type
+
+```typescript
+// Using record type mapping
+interface ResourceTypes {
+  document: Document;
+  project: Project;
+}
+
+const recordPermissions = new PermissionBuilder<ResourceTypes>()
+  .allow({ role: "editor" })
+  .to(["read", "write"])
+  .on("document")
+  .fields(["title", "content"])
+  .when({
+    field: "status",
+    operator: "eq",
+    value: "draft"
+  })
+  .build();
+```
+
+### 3.5 Example Usage with Discriminated Union
+
+```typescript
+// Using discriminated union
+interface Document {
+  type: "document";
+  id: string;
+  title: string;
+  content: string;
+  status: "draft" | "published";
+}
+
+interface Project {
+  type: "project";
+  id: string;
+  name: string;
+  members: string[];
+  visibility: "public" | "private";
+}
+
+type Resources = Document | Project;
+
+const unionPermissions = new PermissionBuilder<Resources>()
+  .allow({ role: "editor" })
+  .to(["read", "write"])
+  .on("document")  // Type-safe: only "document" | "project" allowed
+  .fields(["title", "content"])  // Type-safe: only Document fields allowed
+  .when({
+    field: "status",
+    operator: "eq",
+    value: "draft"
+  })
+  .build();
+
+// Both approaches provide full type safety
+const doc: Document = {
+  type: "document",
+  id: "1",
+  title: "Hello",
+  content: "World",
+  status: "draft"
+};
+
+// Works with both record and union approaches
+const canEdit = unionPermissions.check({
+  subject: { role: "editor" },
+  action: "write",
+  object: "document",
+  field: "content",
+  data: doc
+});
 ```
