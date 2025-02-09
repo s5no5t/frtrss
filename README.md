@@ -10,6 +10,7 @@ A type-safe attribute-based access control (ABAC) authorization library for Type
 - Field-level permissions with nested path support
 - Allow and deny permissions
 - Serialization/deserialization support
+- Optional validation support with [zod](https://github.com/colinhacks/zod)
 - Safe default "deny all"
 - Full browser and Node.js compatibility with CommonJS and ES Modules support
 - Tree-shakeable for optimal bundle size
