@@ -31,14 +31,14 @@ interface Article {
   authorId: string;
 }
 
-type ResourceType = {
+type ObjectType = {
   document: Document;
   article: Article;
 };
 
 describe("PermissionBuilder", () => {
   it("should allow access when conditions are met", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -75,7 +75,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when subject ID doesn't match", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -112,7 +112,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when subject role doesn't match", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -138,7 +138,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when both subject ID and role don't match", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -164,7 +164,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when action doesn't match", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -190,7 +190,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when action is a substring of allowed action", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("update")
       .on("document")
@@ -216,7 +216,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when action is a superstring of allowed action", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -242,7 +242,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when object doesn't match", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -257,7 +257,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Article" as keyof ResourceType,
+      object: "Article" as keyof ObjectType,
       field: "content",
       data: {
         id: "1",
@@ -273,7 +273,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when object is a substring of allowed object", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -288,7 +288,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Doc" as keyof ResourceType,
+      object: "Doc" as keyof ObjectType,
       field: "content",
       data: {
         metadata: { status: "published" },
@@ -299,7 +299,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when object is a superstring of allowed object", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -314,7 +314,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "DocumentType" as keyof ResourceType,
+      object: "DocumentType" as keyof ObjectType,
       field: "content",
       data: {
         metadata: { status: "published" },
@@ -325,7 +325,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when object has different casing", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -340,7 +340,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document" as keyof ResourceType,
+      object: "Document" as keyof ObjectType,
       field: "content",
       data: {
         metadata: {
@@ -353,7 +353,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should deny access when conditions are not met", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -379,7 +379,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support array in operator", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -408,7 +408,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support wildcard fields", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "admin" })
       .to("read")
       .on("document")
@@ -427,7 +427,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support deny rules overriding allow rules", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -459,7 +459,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support numeric comparisons", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -496,7 +496,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support not equal operator", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -539,7 +539,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support not in operator", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -582,7 +582,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support array size operator", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
       .on("document")
@@ -625,7 +625,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support multiple actions", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to(["read", "list"])
       .on("document")
@@ -671,7 +671,7 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support multiple actions with deny rules", () => {
-    const permissions = new PermissionBuilder<ResourceType>()
+    const permissions = new PermissionBuilder<ObjectType>()
       .allow<User>({ id: "1", role: "editor" })
       .to(["read", "write", "list"])
       .on("document")
@@ -724,7 +724,7 @@ describe("PermissionBuilder", () => {
 
   describe("allowAll", () => {
     it("should allow access to any subject when using allowAll", () => {
-      const permissions = new PermissionBuilder<ResourceType>()
+      const permissions = new PermissionBuilder<ObjectType>()
         .allowAll()
         .to("read")
         .on("document")
@@ -787,7 +787,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect conditions when using allowAll", () => {
-      const permissions = new PermissionBuilder<ResourceType>()
+      const permissions = new PermissionBuilder<ObjectType>()
         .allowAll()
         .to("read")
         .on("document")
@@ -813,7 +813,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect action restrictions when using allowAll", () => {
-      const permissions = new PermissionBuilder<ResourceType>()
+      const permissions = new PermissionBuilder<ObjectType>()
         .allowAll()
         .to("read")
         .on("document")
@@ -841,7 +841,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect field restrictions when using allowAll", () => {
-      const permissions = new PermissionBuilder<ResourceType>()
+      const permissions = new PermissionBuilder<ObjectType>()
         .allowAll()
         .to("read")
         .on("document")
@@ -870,8 +870,8 @@ describe("PermissionBuilder", () => {
   });
 
   describe("Multiple Resource Types", () => {
-    it("should support permissions across different resource types", () => {
-      const permissions = new PermissionBuilder<ResourceType>()
+    it("should support permissions across different object types", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -932,29 +932,29 @@ describe("PermissionBuilder", () => {
       expect(articleResult).toBe(true);
     });
 
-    it("should correctly handle deny rules across different resource types", () => {
-      const documentPermissions = new PermissionBuilder<ResourceType>()
+    it("should correctly handle deny rules across different object types", () => {
+      const documentPermissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
         .to(["read", "write"])
         .on("document")
         .allFields()
         .build();
 
-      const documentDenyPermissions = new PermissionBuilder<ResourceType>()
+      const documentDenyPermissions = new PermissionBuilder<ObjectType>()
         .deny<User>({ id: "1", role: "editor" })
         .to("write")
         .on("document")
         .fields(["metadata.status"])
         .build();
 
-      const articlePermissions = new PermissionBuilder<ResourceType>()
+      const articlePermissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
         .to(["read", "write"])
         .on("article")
         .allFields()
         .build();
 
-      const articleDenyPermissions = new PermissionBuilder<ResourceType>()
+      const articleDenyPermissions = new PermissionBuilder<ObjectType>()
         .deny<User>({ id: "1", role: "editor" })
         .to("write")
         .on("article")
@@ -1039,8 +1039,8 @@ describe("PermissionBuilder", () => {
       expect(articleWriteResult).toBe(false);
     });
 
-    it("should handle conditions independently for different resource types", () => {
-      const documentPermissions = new PermissionBuilder<ResourceType>()
+    it("should handle conditions independently for different object types", () => {
+      const documentPermissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -1052,7 +1052,7 @@ describe("PermissionBuilder", () => {
         })
         .build();
 
-      const articlePermissions = new PermissionBuilder<ResourceType>()
+      const articlePermissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("article")

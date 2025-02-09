@@ -3,7 +3,7 @@ import { Permissions } from "./permissions";
 
 /**
  * A fluent builder for creating permission rules
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping object types to their data types
  */
 export class PermissionBuilder<T extends Record<string, any>> {
   private permissions: Array<Permission<T, any>> = [];
@@ -55,7 +55,7 @@ export class PermissionBuilder<T extends Record<string, any>> {
 
 /**
  * Builder for specifying actions in a permission rule
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping object types to their data types
  * @template S The type of the subject
  */
 class ActionBuilder<T extends Record<string, any>, S> {
@@ -83,7 +83,7 @@ class ActionBuilder<T extends Record<string, any>, S> {
 
 /**
  * Builder for specifying the target object in a permission rule
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping object types to their data types
  * @template S The type of the subject
  */
 class ObjectBuilder<T extends Record<string, any>, S> {
@@ -113,7 +113,7 @@ class ObjectBuilder<T extends Record<string, any>, S> {
 
 /**
  * Builder for specifying fields in a permission rule
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping object types to their data types
  * @template S The type of the subject
  * @template O The type of the object
  */
@@ -153,7 +153,7 @@ class FieldBuilder<T extends Record<string, any>, S, O extends keyof T> {
 
 /**
  * Builder for specifying conditions in a permission rule
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping object types to their data types
  * @template S The type of the subject
  * @template O The type of the object
  */
