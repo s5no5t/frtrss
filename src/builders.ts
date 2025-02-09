@@ -195,8 +195,8 @@ class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
   }
 
   /**
-   * Finalizes the permission rule without adding conditions
-   * @returns PermissionBuilder<T> The main permission builder
+   * Finalizes the current permission rule and returns to the main builder for chaining additional rules
+   * @returns PermissionBuilder<T> The main permission builder for chaining additional rules
    */
   and(): PermissionBuilder<T> {
     for (const action of this.actions) {
@@ -212,5 +212,25 @@ class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
       });
     }
     return this.builder;
+  }
+
+  /**
+   * Builds and returns a Permissions instance with all added rules
+   * @returns Permissions<T> A new Permissions instance
+   */
+  build(): Permissions<T> {
+    for (const action of this.actions) {
+      this.builder.addPermission<S>({
+        subject: this.subject,
+        action,
+        object: this.object,
+        fields: this.fields,
+        conditions: this.conditions as unknown as Array<
+          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
+        >,
+        type: this.type,
+      });
+    }
+    return this.builder.build();
   }
 }

@@ -413,7 +413,6 @@ describe("PermissionBuilder", () => {
       .to("read")
       .on("document")
       .allFields()
-      .and()
       .build();
 
     const result = permissions.check({
@@ -438,7 +437,6 @@ describe("PermissionBuilder", () => {
       .to("read")
       .on("document")
       .fields(["author.email"])
-      .and()
       .build();
 
     const allowedResult = permissions.check({
@@ -684,7 +682,6 @@ describe("PermissionBuilder", () => {
       .to(["write", "delete"])
       .on("document")
       .allFields()
-      .and()
       .build();
 
     const data = {} as Document;
@@ -823,7 +820,6 @@ describe("PermissionBuilder", () => {
         .to("read")
         .on("document")
         .fields(["metadata.title"])
-        .and()
         .build();
 
       const readResult = permissions.check({
@@ -852,7 +848,6 @@ describe("PermissionBuilder", () => {
         .to("read")
         .on("document")
         .fields(["metadata.title"])
-        .and()
         .build();
 
       const allowedFieldResult = permissions.check({
@@ -945,7 +940,6 @@ describe("PermissionBuilder", () => {
         .to(["read", "write"])
         .on("document")
         .allFields()
-        .and()
         .build();
 
       const documentDenyPermissions = new PermissionBuilder<ResourceType>()
@@ -953,7 +947,6 @@ describe("PermissionBuilder", () => {
         .to("write")
         .on("document")
         .fields(["metadata.status"])
-        .and()
         .build();
 
       const articlePermissions = new PermissionBuilder<ResourceType>()
@@ -961,7 +954,6 @@ describe("PermissionBuilder", () => {
         .to(["read", "write"])
         .on("article")
         .allFields()
-        .and()
         .build();
 
       const articleDenyPermissions = new PermissionBuilder<ResourceType>()
@@ -969,7 +961,6 @@ describe("PermissionBuilder", () => {
         .to("write")
         .on("article")
         .fields(["status"])
-        .and()
         .build();
 
       const documentReadResult = documentPermissions.check({
