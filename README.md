@@ -64,6 +64,10 @@ const canRead = permissions.check({
 }); // true
 ```
 
+## API Documentation & Use Cases
+
+See [API.md](./doc/API.md).
+
 ## Attribute-Based Access Control (ABAC)
 
 frtrss implements [Attribute-Based Access Control (ABAC)](https://en.wikipedia.org/wiki/Attribute-based_access_control), a flexible and powerful authorization model that evaluates permissions based on attributes/properties of:
@@ -82,10 +86,6 @@ This approach allows for more dynamic and fine-grained access control compared t
 * doesn't rely on class reflection for object types
 * more explicit about field-level permissions
 * zod schema validation
-
-## API Documentation
-
-See [API.md](./doc/API.md).
 
 ## Development
 
