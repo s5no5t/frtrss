@@ -68,6 +68,10 @@ export class Permissions<T> {
   }
 
   private matchesSubject(permissionSubject: any, requestSubject: any): boolean {
+    // Handle wildcard subject
+    if (permissionSubject === "*") {
+      return true;
+    }
     return Object.entries(permissionSubject).every(
       ([key, value]) => requestSubject[key] === value
     );

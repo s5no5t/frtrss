@@ -19,6 +19,14 @@ export class PermissionBuilder<T> {
   }
 
   /**
+   * Starts building an allow permission rule that applies to all subjects
+   * @returns ActionBuilder<T, "*"> A builder for specifying the allowed actions for all subjects
+   */
+  allowAll(): ActionBuilder<T, "*"> {
+    return new ActionBuilder<T, "*">(this, "*", "allow");
+  }
+
+  /**
    * Starts building a deny permission rule
    * @template S The type of the subject
    * @param subject The subject to deny

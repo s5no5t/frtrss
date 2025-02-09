@@ -25,6 +25,15 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
     // ... chain other methods to complete the rule ...
   ```
 
+- **`allowAll(): PermissionBuilder<T>`**  
+  Registers a wildcard permission that applies to all subjects. This is useful for defining public access rules.  
+  _Usage:_  
+  ```typescript
+  new PermissionBuilder<Document>()
+    .allowAll()                            // Start building a public access rule
+    // ... chain other methods to complete the rule ...
+  ```
+
 - **`deny<S>(subject: S): PermissionBuilder<T>`**  
   Registers a subject that is explicitly denied permission. Deny rules take precedence over allow rules.  
   _Usage:_  

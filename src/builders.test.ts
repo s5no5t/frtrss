@@ -683,4 +683,153 @@ describe("PermissionBuilder", () => {
     expect(writeResult).toBe(false);
     expect(deleteResult).toBe(false);
   });
+
+  describe("allowAll", () => {
+    it("should allow access to any subject when using allowAll", () => {
+      const permissions = new PermissionBuilder<Document>()
+        .allowAll()
+        .to("read")
+        .on("Document")
+        .fields(["metadata.title"])
+        .when({
+          field: "metadata.status",
+          operator: "eq",
+          value: "published",
+        })
+        .build();
+
+      // Test with editor
+      const editorResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {
+          metadata: { status: "published" },
+        } as Document,
+      });
+
+      // Test with user
+      const userResult = permissions.check({
+        subject: { id: "2", role: "user" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {
+          metadata: { status: "published" },
+        } as Document,
+      });
+
+      // Test with admin
+      const adminResult = permissions.check({
+        subject: { id: "3", role: "admin" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {
+          metadata: { status: "published" },
+        } as Document,
+      });
+
+      // Test with completely different subject type
+      const customSubjectResult = permissions.check({
+        subject: { customId: "123", type: "system" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {
+          metadata: { status: "published" },
+        } as Document,
+      });
+
+      expect(editorResult).toBe(true);
+      expect(userResult).toBe(true);
+      expect(adminResult).toBe(true);
+      expect(customSubjectResult).toBe(true);
+    });
+
+    it("should still respect conditions when using allowAll", () => {
+      const permissions = new PermissionBuilder<Document>()
+        .allowAll()
+        .to("read")
+        .on("Document")
+        .fields(["metadata.title"])
+        .when({
+          field: "metadata.status",
+          operator: "eq",
+          value: "published",
+        })
+        .build();
+
+      const result = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {
+          metadata: { status: "draft" }, // Condition not met
+        } as Document,
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it("should still respect action restrictions when using allowAll", () => {
+      const permissions = new PermissionBuilder<Document>()
+        .allowAll()
+        .to("read")
+        .on("Document")
+        .fields(["metadata.title"])
+        .and()
+        .build();
+
+      const readResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {} as Document,
+      });
+
+      const writeResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "write",
+        object: "Document",
+        field: "metadata.title",
+        data: {} as Document,
+      });
+
+      expect(readResult).toBe(true);
+      expect(writeResult).toBe(false);
+    });
+
+    it("should still respect field restrictions when using allowAll", () => {
+      const permissions = new PermissionBuilder<Document>()
+        .allowAll()
+        .to("read")
+        .on("Document")
+        .fields(["metadata.title"])
+        .and()
+        .build();
+
+      const allowedFieldResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "Document",
+        field: "metadata.title",
+        data: {} as Document,
+      });
+
+      const restrictedFieldResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "Document",
+        field: "content",
+        data: {} as Document,
+      });
+
+      expect(allowedFieldResult).toBe(true);
+      expect(restrictedFieldResult).toBe(false);
+    });
+  });
 });

@@ -63,7 +63,20 @@ type Condition = {
 - Field-level permissions require explicit field specification
 - All conditions must be satisfied (AND logic)
 
-### 2.3 Operators
+### 2.3 Public Access
+
+The library supports defining public access rules that apply to all subjects using the `allowAll` method. This is useful for:
+- Public resources that should be accessible to anyone
+- Default permissions that apply regardless of subject type
+- Base-level access rules that can be overridden by more specific deny rules
+
+Public access rules follow the same evaluation logic as regular rules:
+- They still respect field restrictions
+- They still respect action restrictions
+- They still respect conditions
+- They can be overridden by deny rules
+
+### 2.4 Operators
 
 The library supports the following operators:
 
@@ -675,4 +688,151 @@ const canReadEmail = permissions.check({
   field: "author.email",
   data: blogPost,
 }); // false (email not in allowed fields)
+```
+
+### 6.4 Example with Public Access
+
+This example demonstrates how to use `allowAll` to define public access rules that apply to any subject type.
+
+**Example Code:**
+```typescript
+import { PermissionBuilder } from "frtrss";
+
+interface Document {
+  id: string;
+  metadata: {
+    title: string;
+    status: "draft" | "published" | "archived";
+  };
+  content: string;
+}
+
+// Create permissions with public access rules
+const permissions = new PermissionBuilder<Document>()
+  // Allow public read access to titles of published documents
+  .allowAll()
+  .to("read")
+  .on("Document")
+  .fields(["metadata.title"])
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "published",
+  })
+  // Allow public read access to document content
+  .allowAll()
+  .to("read")
+  .on("Document")
+  .fields(["content"])
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "published",
+  })
+  // Deny access to archived documents for everyone
+  .deny({ role: "*" })
+  .to(["read", "write"])
+  .on("Document")
+  .allFields()
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "archived",
+  })
+  .build();
+
+// Test with different subject types
+const regularUser = { id: "1", role: "user" };
+const anonymousUser = { type: "anonymous" };
+const serviceAccount = { serviceId: "123", type: "service" };
+
+// Check permissions for published document
+const publishedDoc = {
+  id: "1",
+  metadata: {
+    title: "Public Document",
+    status: "published",
+  },
+  content: "Hello World",
+} as Document;
+
+console.log(
+  "Regular user can read title:",
+  permissions.check({
+    subject: regularUser,
+    action: "read",
+    object: "Document",
+    field: "metadata.title",
+    data: publishedDoc,
+  })
+); // true
+
+console.log(
+  "Anonymous user can read title:",
+  permissions.check({
+    subject: anonymousUser,
+    action: "read",
+    object: "Document",
+    field: "metadata.title",
+    data: publishedDoc,
+  })
+); // true
+
+console.log(
+  "Service account can read title:",
+  permissions.check({
+    subject: serviceAccount,
+    action: "read",
+    object: "Document",
+    field: "metadata.title",
+    data: publishedDoc,
+  })
+); // true
+
+// Check permissions for archived document
+const archivedDoc = {
+  id: "2",
+  metadata: {
+    title: "Archived Document",
+    status: "archived",
+  },
+  content: "Old Content",
+} as Document;
+
+console.log(
+  "Regular user can read archived:",
+  permissions.check({
+    subject: regularUser,
+    action: "read",
+    object: "Document",
+    field: "metadata.title",
+    data: archivedDoc,
+  })
+); // false
+
+console.log(
+  "Anonymous user can read archived:",
+  permissions.check({
+    subject: anonymousUser,
+    action: "read",
+    object: "Document",
+    field: "metadata.title",
+    data: archivedDoc,
+  })
+); // false
+```
+
+**Explanation:**  
+This example shows how to:
+- Define public access rules using `allowAll`
+- Apply conditions to public access rules
+- Override public access with deny rules
+- Handle different subject types with the same public rules
+- Combine public access with specific deny rules
+
+### 5. Storing and Loading Permissions
+
+```typescript
+console.log(`Application user can write: ${canUserWrite}`);
+console.log(`Service account can read: ${canServiceRead}`);
 ```
