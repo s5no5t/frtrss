@@ -3,9 +3,9 @@ import { Permissions } from "./permissions";
 
 /**
  * A fluent builder for creating permission rules
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  */
-export class PermissionBuilder<T> {
+export class PermissionBuilder<T extends Record<string, any>> {
   private permissions: Array<Permission<T, any>> = [];
 
   /**
@@ -40,7 +40,7 @@ export class PermissionBuilder<T> {
    * Adds a permission rule to the builder
    * @param permission The permission rule to add
    */
-  addPermission(permission: Permission<T, any>): void {
+  addPermission<S>(permission: Permission<T, S>): void {
     this.permissions.push(permission);
   }
 
@@ -55,10 +55,10 @@ export class PermissionBuilder<T> {
 
 /**
  * Builder for specifying actions in a permission rule
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  * @template S The type of the subject
  */
-class ActionBuilder<T, S> {
+class ActionBuilder<T extends Record<string, any>, S> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
@@ -83,10 +83,10 @@ class ActionBuilder<T, S> {
 
 /**
  * Builder for specifying the target object in a permission rule
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  * @template S The type of the subject
  */
-class ObjectBuilder<T, S> {
+class ObjectBuilder<T extends Record<string, any>, S> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
@@ -96,11 +96,12 @@ class ObjectBuilder<T, S> {
 
   /**
    * Specifies the object the permission applies to
+   * @template O The type of the object
    * @param object The target object identifier
-   * @returns FieldBuilder<T, S> A builder for specifying the fields
+   * @returns FieldBuilder<T, S, O> A builder for specifying the fields
    */
-  on(object: string): FieldBuilder<T, S> {
-    return new FieldBuilder<T, S>(
+  on<O extends keyof T>(object: O): FieldBuilder<T, S, O> {
+    return new FieldBuilder<T, S, O>(
       this.builder,
       this.subject,
       this.type,
@@ -112,25 +113,26 @@ class ObjectBuilder<T, S> {
 
 /**
  * Builder for specifying fields in a permission rule
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  * @template S The type of the subject
+ * @template O The type of the object
  */
-class FieldBuilder<T, S> {
+class FieldBuilder<T extends Record<string, any>, S, O extends keyof T> {
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
     private actions: string[],
-    private object: string
+    private object: O
   ) {}
 
   /**
    * Specifies the fields the permission applies to
-   * @param fields Array of field names or paths
-   * @returns ConditionBuilder<T, S> A builder for specifying conditions
+   * @param fields Array of field paths
+   * @returns ConditionBuilder<T, S, O> A builder for specifying conditions
    */
-  fields(fields: Array<string>): ConditionBuilder<T, S> {
-    return new ConditionBuilder<T, S>(
+  fields(fields: Array<PathsToStringProps<T[O]>>): ConditionBuilder<T, S, O> {
+    return new ConditionBuilder<T, S, O>(
       this.builder,
       this.subject,
       this.type,
@@ -142,27 +144,28 @@ class FieldBuilder<T, S> {
 
   /**
    * Grants permission to all fields using wildcard
-   * @returns ConditionBuilder<T, S> A builder for specifying conditions
+   * @returns ConditionBuilder<T, S, O> A builder for specifying conditions
    */
-  allFields(): ConditionBuilder<T, S> {
-    return this.fields(["*"]);
+  allFields(): ConditionBuilder<T, S, O> {
+    return this.fields(["*" as PathsToStringProps<T[O]>]);
   }
 }
 
 /**
  * Builder for specifying conditions in a permission rule
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  * @template S The type of the subject
+ * @template O The type of the object
  */
-class ConditionBuilder<T, S> {
-  private conditions: Array<Condition<T, PathsToStringProps<T>>> = [];
+class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
+  private conditions: Array<Condition<T[O], PathsToStringProps<T[O]>>> = [];
 
   constructor(
     private builder: PermissionBuilder<T>,
     private subject: S,
     private type: "allow" | "deny",
     private actions: string[],
-    private object: string,
+    private object: O,
     private fields: Array<string>
   ) {}
 
@@ -172,17 +175,19 @@ class ConditionBuilder<T, S> {
    * @param condition The condition to add
    * @returns PermissionBuilder<T> The main permission builder
    */
-  when<P extends PathsToStringProps<T>>(
-    condition: Condition<T, P>
+  when<P extends PathsToStringProps<T[O]>>(
+    condition: Condition<T[O], P>
   ): PermissionBuilder<T> {
     this.conditions.push(condition);
     for (const action of this.actions) {
-      this.builder.addPermission({
+      this.builder.addPermission<S>({
         subject: this.subject,
         action,
         object: this.object,
         fields: this.fields,
-        conditions: this.conditions,
+        conditions: this.conditions as unknown as Array<
+          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
+        >,
         type: this.type,
       });
     }
@@ -195,12 +200,14 @@ class ConditionBuilder<T, S> {
    */
   and(): PermissionBuilder<T> {
     for (const action of this.actions) {
-      this.builder.addPermission({
+      this.builder.addPermission<S>({
         subject: this.subject,
         action,
         object: this.object,
         fields: this.fields,
-        conditions: this.conditions,
+        conditions: this.conditions as unknown as Array<
+          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
+        >,
         type: this.type,
       });
     }

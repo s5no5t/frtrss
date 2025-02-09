@@ -22,272 +22,16 @@ interface Document {
   reviewers: string[];
 }
 
+type ResourceType = {
+  document: Document;
+};
+
 describe("PermissionBuilder", () => {
   it("should allow access when conditions are met", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "read",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(true);
-  });
-
-  it("should deny access when subject ID doesn't match", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "2", role: "editor" },
-      action: "read",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when subject role doesn't match", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "user" },
-      action: "read",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when both subject ID and role don't match", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "2", role: "user" },
-      action: "read",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when action doesn't match", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "write",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when action is a substring of allowed action", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("update")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "up",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when action is a superstring of allowed action", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "readwrite",
-      object: "Document",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when object doesn't match", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "read",
-      object: "Article",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when object is a substring of allowed object", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "read",
-      object: "Doc",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when object is a superstring of allowed object", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
-      .fields(["metadata.title", "content"])
-      .when({
-        field: "metadata.status",
-        operator: "eq",
-        value: "published",
-      })
-      .build();
-
-    const result = permissions.check({
-      subject: { id: "1", role: "editor" },
-      action: "read",
-      object: "DocumentType",
-      field: "content",
-      data: {
-        metadata: { status: "published" },
-      } as Document,
-    });
-
-    expect(result).toBe(false);
-  });
-
-  it("should deny access when object has different casing", () => {
-    const permissions = new PermissionBuilder<Document>()
-      .allow<User>({ id: "1", role: "editor" })
-      .to("read")
-      .on("Document")
+      .on("document")
       .fields(["metadata.title", "content"])
       .when({
         field: "metadata.status",
@@ -306,14 +50,170 @@ describe("PermissionBuilder", () => {
       } as Document,
     });
 
+    expect(result).toBe(true);
+  });
+
+  it("should deny access when subject ID doesn't match", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "2", role: "editor" },
+      action: "read",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
     expect(result).toBe(false);
   });
 
-  it("should deny access when conditions are not met", () => {
-    const permissions = new PermissionBuilder<Document>()
+  it("should deny access when subject role doesn't match", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "user" },
+      action: "read",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when both subject ID and role don't match", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "2", role: "user" },
+      action: "read",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when action doesn't match", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "write",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when action is a substring of allowed action", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("update")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "up",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when action is a superstring of allowed action", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "readwrite",
+      object: "document",
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when object doesn't match", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
       .fields(["metadata.title", "content"])
       .when({
         field: "metadata.status",
@@ -325,7 +225,113 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "Article" as keyof ResourceType,
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when object is a substring of allowed object", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Doc" as keyof ResourceType,
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when object is a superstring of allowed object", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "DocumentType" as keyof ResourceType,
+      field: "content",
+      data: {
+        metadata: { status: "published" },
+      } as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when object has different casing", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document" as keyof ResourceType,
+      field: "content",
+      data: {
+        metadata: {
+          status: "published",
+        },
+      },
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should deny access when conditions are not met", () => {
+    const permissions = new PermissionBuilder<ResourceType>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("document")
+      .fields(["metadata.title", "content"])
+      .when({
+        field: "metadata.status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "document",
       field: "content",
       data: {
         metadata: { status: "draft" },
@@ -336,10 +342,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support array in operator", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["content"])
       .when({
         field: "reviewers",
@@ -351,7 +357,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -365,10 +371,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support wildcard fields", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "admin" })
       .to("read")
-      .on("Document")
+      .on("document")
       .allFields()
       .and()
       .build();
@@ -376,7 +382,7 @@ describe("PermissionBuilder", () => {
     const result = permissions.check({
       subject: { id: "1", role: "admin" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "author.email",
       data: {} as Document,
     });
@@ -385,15 +391,15 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support deny rules overriding allow rules", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .allFields()
       .and()
       .deny<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["author.email"])
       .and()
       .build();
@@ -401,7 +407,7 @@ describe("PermissionBuilder", () => {
     const allowedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {} as Document,
     });
@@ -409,7 +415,7 @@ describe("PermissionBuilder", () => {
     const deniedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "author.email",
       data: {} as Document,
     });
@@ -419,10 +425,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support numeric comparisons", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["content"])
       .when({
         field: "metadata.version",
@@ -434,7 +440,7 @@ describe("PermissionBuilder", () => {
     const deniedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         metadata: { version: 1 },
@@ -444,7 +450,7 @@ describe("PermissionBuilder", () => {
     const allowedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         metadata: { version: 2 },
@@ -456,10 +462,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support not equal operator", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["content"])
       .when({
         field: "metadata.status",
@@ -471,7 +477,7 @@ describe("PermissionBuilder", () => {
     const deniedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -484,7 +490,7 @@ describe("PermissionBuilder", () => {
     const allowedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -499,10 +505,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support not in operator", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["content"])
       .when({
         field: "reviewers",
@@ -514,7 +520,7 @@ describe("PermissionBuilder", () => {
     const deniedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -527,7 +533,7 @@ describe("PermissionBuilder", () => {
     const allowedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -542,10 +548,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support array size operator", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to("read")
-      .on("Document")
+      .on("document")
       .fields(["content"])
       .when({
         field: "reviewers",
@@ -557,7 +563,7 @@ describe("PermissionBuilder", () => {
     const deniedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -570,7 +576,7 @@ describe("PermissionBuilder", () => {
     const allowedResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data: {
         id: "1",
@@ -585,10 +591,10 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support multiple actions", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to(["read", "list"])
-      .on("Document")
+      .on("document")
       .fields(["metadata.title", "content"])
       .when({
         field: "metadata.status",
@@ -604,7 +610,7 @@ describe("PermissionBuilder", () => {
     const readResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -612,7 +618,7 @@ describe("PermissionBuilder", () => {
     const listResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "list",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -620,7 +626,7 @@ describe("PermissionBuilder", () => {
     const writeResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "write",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -631,15 +637,15 @@ describe("PermissionBuilder", () => {
   });
 
   it("should support multiple actions with deny rules", () => {
-    const permissions = new PermissionBuilder<Document>()
+    const permissions = new PermissionBuilder<ResourceType>()
       .allow<User>({ id: "1", role: "editor" })
       .to(["read", "write", "list"])
-      .on("Document")
+      .on("document")
       .allFields()
       .and()
       .deny<User>({ id: "1", role: "editor" })
       .to(["write", "delete"])
-      .on("Document")
+      .on("document")
       .allFields()
       .and()
       .build();
@@ -649,7 +655,7 @@ describe("PermissionBuilder", () => {
     const readResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "read",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -657,7 +663,7 @@ describe("PermissionBuilder", () => {
     const listResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "list",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -665,7 +671,7 @@ describe("PermissionBuilder", () => {
     const writeResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "write",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -673,7 +679,7 @@ describe("PermissionBuilder", () => {
     const deleteResult = permissions.check({
       subject: { id: "1", role: "editor" },
       action: "delete",
-      object: "Document",
+      object: "document",
       field: "content",
       data,
     });
@@ -686,10 +692,10 @@ describe("PermissionBuilder", () => {
 
   describe("allowAll", () => {
     it("should allow access to any subject when using allowAll", () => {
-      const permissions = new PermissionBuilder<Document>()
+      const permissions = new PermissionBuilder<ResourceType>()
         .allowAll()
         .to("read")
-        .on("Document")
+        .on("document")
         .fields(["metadata.title"])
         .when({
           field: "metadata.status",
@@ -702,7 +708,7 @@ describe("PermissionBuilder", () => {
       const editorResult = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {
           metadata: { status: "published" },
@@ -713,7 +719,7 @@ describe("PermissionBuilder", () => {
       const userResult = permissions.check({
         subject: { id: "2", role: "user" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {
           metadata: { status: "published" },
@@ -724,7 +730,7 @@ describe("PermissionBuilder", () => {
       const adminResult = permissions.check({
         subject: { id: "3", role: "admin" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {
           metadata: { status: "published" },
@@ -735,7 +741,7 @@ describe("PermissionBuilder", () => {
       const customSubjectResult = permissions.check({
         subject: { customId: "123", type: "system" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {
           metadata: { status: "published" },
@@ -749,10 +755,10 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect conditions when using allowAll", () => {
-      const permissions = new PermissionBuilder<Document>()
+      const permissions = new PermissionBuilder<ResourceType>()
         .allowAll()
         .to("read")
-        .on("Document")
+        .on("document")
         .fields(["metadata.title"])
         .when({
           field: "metadata.status",
@@ -764,7 +770,7 @@ describe("PermissionBuilder", () => {
       const result = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {
           metadata: { status: "draft" }, // Condition not met
@@ -775,10 +781,10 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect action restrictions when using allowAll", () => {
-      const permissions = new PermissionBuilder<Document>()
+      const permissions = new PermissionBuilder<ResourceType>()
         .allowAll()
         .to("read")
-        .on("Document")
+        .on("document")
         .fields(["metadata.title"])
         .and()
         .build();
@@ -786,7 +792,7 @@ describe("PermissionBuilder", () => {
       const readResult = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {} as Document,
       });
@@ -794,7 +800,7 @@ describe("PermissionBuilder", () => {
       const writeResult = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "write",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {} as Document,
       });
@@ -804,10 +810,10 @@ describe("PermissionBuilder", () => {
     });
 
     it("should still respect field restrictions when using allowAll", () => {
-      const permissions = new PermissionBuilder<Document>()
+      const permissions = new PermissionBuilder<ResourceType>()
         .allowAll()
         .to("read")
-        .on("Document")
+        .on("document")
         .fields(["metadata.title"])
         .and()
         .build();
@@ -815,7 +821,7 @@ describe("PermissionBuilder", () => {
       const allowedFieldResult = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "metadata.title",
         data: {} as Document,
       });
@@ -823,7 +829,7 @@ describe("PermissionBuilder", () => {
       const restrictedFieldResult = permissions.check({
         subject: { id: "1", role: "editor" },
         action: "read",
-        object: "Document",
+        object: "document",
         field: "content",
         data: {} as Document,
       });

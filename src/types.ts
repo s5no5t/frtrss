@@ -1,6 +1,19 @@
 export type Primitive = string | number | boolean | null;
 
 /**
+ * Maps resource types to their corresponding data types
+ * @template T The record type mapping resource types to their data types
+ */
+export type ResourceTypeMap<T> = T extends Record<string, any> ? T : never;
+
+/**
+ * Gets the data type for a specific resource type
+ * @template T The record type mapping resource types to their data types
+ * @template K The resource type key
+ */
+export type ResourceType<T, K extends keyof T> = T[K];
+
+/**
  * Makes all properties in T optional recursively
  */
 export type DeepPartial<T> = {
@@ -56,7 +69,7 @@ export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<
 
 /**
  * Represents a permission rule that defines access control
- * @template T The type of data that permissions will be checked against
+ * @template T The record type mapping resource types to their data types
  * @template S The type of the subject
  */
 export type Permission<T, S> = {
@@ -65,18 +78,18 @@ export type Permission<T, S> = {
   /** The action being performed */
   action: string;
   /** The object being accessed */
-  object: string;
+  object: keyof T;
   /** The fields that the permission applies to */
   fields: string[];
   /** The conditions that must be met for the permission to apply */
-  conditions: Array<Condition<T, PathsToStringProps<T>>>;
+  conditions: Array<Condition<T[keyof T], PathsToStringProps<T[keyof T]>>>;
   /** Whether this is an allow or deny rule */
   type: "allow" | "deny";
 };
 
 /**
  * Parameters for checking a permission
- * @template T The type of data being checked
+ * @template T The record type mapping resource types to their data types
  */
 export type PermissionCheck<T> = {
   /** The subject requesting access */
@@ -84,11 +97,11 @@ export type PermissionCheck<T> = {
   /** The action being performed */
   action: string;
   /** The object being accessed */
-  object: string;
+  object: keyof T;
   /** The field being accessed */
   field: string;
   /** The data being evaluated */
-  data: DeepPartial<T>;
+  data: DeepPartial<T[keyof T]>;
 };
 
 // Serialization types

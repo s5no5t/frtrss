@@ -1,18 +1,19 @@
 import {
   Permission,
+  PermissionCheck,
+  PermissionRuleDTO,
+  PermissionsDTO,
+  PermissionValidationError,
   Condition,
   PathsToStringProps,
-  PermissionsDTO,
-  PermissionRuleDTO,
-  PermissionValidationError,
+  DeepPartial,
 } from "./types";
-import { validateDTO } from "./validation";
 
 /**
- * A class that manages and evaluates permissions for a given data type T.
- * @template T The type of data that permissions will be checked against
+ * Manages a set of permission rules and provides methods for checking permissions
+ * @template T The record type mapping resource types to their data types
  */
-export class Permissions<T> {
+export class Permissions<T extends Record<string, any>> {
   /**
    * Creates a new Permissions instance
    * @param permissions An array of Permission objects that define the rules
@@ -20,51 +21,65 @@ export class Permissions<T> {
   constructor(private permissions: Array<Permission<T, any>>) {}
 
   /**
-   * Checks if a given request is allowed based on the defined permissions
+   * Checks if a permission is granted
    * @param params The permission check parameters
-   * @param params.subject The subject requesting access
-   * @param params.action The action being performed
-   * @param params.object The object being accessed
-   * @param params.field The specific field being accessed
-   * @param params.data The data being evaluated
-   * @returns boolean True if the request is allowed, false otherwise
+   * @returns boolean Whether the permission is granted
    */
-  check(params: {
-    subject: any;
-    action: string;
-    object: string;
-    field: string;
-    data: T;
-  }): boolean {
+  check(params: PermissionCheck<T>): boolean {
     const { subject, action, object, field, data } = params;
 
-    // Default to deny
-    let allowed = false;
+    // First check for explicit deny rules
+    const denyRules = this.permissions.filter(
+      (p) =>
+        p.type === "deny" &&
+        this.matchesSubject(p.subject, subject) &&
+        p.action === action &&
+        this.matchesObject(p.object, object) &&
+        this.matchesField(p.fields, field)
+    );
 
-    for (const permission of this.permissions) {
-      // Check if permission applies to this request
-      if (
-        this.matchesSubject(permission.subject, subject) &&
-        permission.action === action &&
-        permission.object === object &&
-        this.matchesField(permission.fields, field)
-      ) {
-        // Check conditions
-        const conditionsMet = permission.conditions.every((condition) =>
-          this.evaluateCondition(condition, data)
-        );
-
-        if (conditionsMet) {
-          if (permission.type === "allow") {
-            allowed = true;
-          } else {
-            return false; // Explicit deny takes precedence
-          }
-        }
-      }
+    if (
+      denyRules.some((rule) => this.matchesConditions(rule.conditions, data))
+    ) {
+      return false;
     }
 
-    return allowed;
+    // Then check for allow rules
+    const allowRules = this.permissions.filter(
+      (p) =>
+        p.type === "allow" &&
+        this.matchesSubject(p.subject, subject) &&
+        p.action === action &&
+        this.matchesObject(p.object, object) &&
+        this.matchesField(p.fields, field)
+    );
+
+    return allowRules.some((rule) =>
+      this.matchesConditions(rule.conditions, data)
+    );
+  }
+
+  /**
+   * Checks if a permission is granted for an entire object
+   * @param subject The subject requesting access
+   * @param action The action being performed
+   * @param object The object being accessed
+   * @param data The data being evaluated
+   * @returns boolean Whether the permission is granted
+   */
+  checkObject<O extends keyof T>(
+    subject: any,
+    action: string,
+    object: O,
+    data: T[O]
+  ): boolean {
+    return this.check({
+      subject,
+      action,
+      object,
+      field: "*",
+      data,
+    });
   }
 
   private matchesSubject(permissionSubject: any, requestSubject: any): boolean {
@@ -78,72 +93,76 @@ export class Permissions<T> {
   }
 
   private matchesField(
-    permissionFields: Array<string>,
+    permissionFields: string[],
     requestField: string
   ): boolean {
-    return permissionFields.some((field) => {
-      if (field === "*") return true;
-      if (field === requestField) return true;
-
-      const fieldParts = field.split(".");
-      const requestParts = requestField.split(".");
-
-      if (fieldParts.length !== requestParts.length) return false;
-
-      return fieldParts.every(
-        (part, index) => part === "*" || part === requestParts[index]
-      );
+    return permissionFields.some((pattern) => {
+      if (pattern === "*") {
+        return true;
+      }
+      if (pattern.includes("*")) {
+        const regex = new RegExp(
+          "^" + pattern.replace(/\./g, "\\.").replace(/\*/g, "[^.]+") + "$"
+        );
+        return regex.test(requestField);
+      }
+      return pattern === requestField;
     });
   }
 
-  private evaluateCondition(
-    condition: Condition<T, PathsToStringProps<T>>,
-    data: T
+  private matchesConditions(
+    conditions: Array<Condition<T[keyof T], PathsToStringProps<T[keyof T]>>>,
+    data: DeepPartial<T[keyof T]>
   ): boolean {
-    const value = this.getFieldValue(data, condition.field);
-
-    switch (condition.operator) {
-      case "eq":
-        return value === condition.value;
-      case "ne":
-        return value !== condition.value;
-      case "gt":
-        return value > condition.value;
-      case "gte":
-        return value >= condition.value;
-      case "lt":
-        return value < condition.value;
-      case "lte":
-        return value <= condition.value;
-      case "in":
-        return (
-          Array.isArray(value) &&
-          value.some((item) =>
-            typeof item === "object" && item !== null
-              ? Object.entries(item as Record<string, unknown>).every(
-                  ([k, v]) =>
-                    (condition.value as Record<string, unknown>)[k] === v
-                )
-              : item === condition.value
-          )
-        );
-      case "nin":
-        return (
-          Array.isArray(value) &&
-          !value.some((item) =>
-            typeof item === "object" && item !== null
-              ? Object.entries(item as Record<string, unknown>).every(
-                  ([k, v]) =>
-                    (condition.value as Record<string, unknown>)[k] === v
-                )
-              : item === condition.value
-          )
-        );
-      case "size":
-        return Array.isArray(value) && value.length === condition.value;
-      default:
+    return conditions.every((condition) => {
+      const value = this.getFieldValue(data, condition.field);
+      if (value === undefined) {
         return false;
-    }
+      }
+
+      switch (condition.operator) {
+        case "eq":
+          return value === condition.value;
+        case "ne":
+          return value !== condition.value;
+        case "gt":
+          return value > condition.value;
+        case "gte":
+          return value >= condition.value;
+        case "lt":
+          return value < condition.value;
+        case "lte":
+          return value <= condition.value;
+        case "in":
+          return (
+            Array.isArray(value) &&
+            value.some((item) =>
+              typeof item === "object" && item !== null
+                ? Object.entries(item as Record<string, unknown>).every(
+                    ([k, v]) =>
+                      (condition.value as Record<string, unknown>)[k] === v
+                  )
+                : item === condition.value
+            )
+          );
+        case "nin":
+          return (
+            Array.isArray(value) &&
+            !value.some((item) =>
+              typeof item === "object" && item !== null
+                ? Object.entries(item as Record<string, unknown>).every(
+                    ([k, v]) =>
+                      (condition.value as Record<string, unknown>)[k] === v
+                  )
+                : item === condition.value
+            )
+          );
+        case "size":
+          return Array.isArray(value) && value.length === condition.value;
+        default:
+          return false;
+      }
+    });
   }
 
   private getFieldValue(obj: any, path: string): any {
@@ -156,6 +175,13 @@ export class Permissions<T> {
     }, obj);
   }
 
+  private matchesObject(
+    permissionObject: keyof T,
+    requestObject: keyof T
+  ): boolean {
+    return permissionObject === requestObject;
+  }
+
   /**
    * Converts the permissions to a DTO format for serialization
    * @returns PermissionsDTO The permissions in DTO format
@@ -165,7 +191,7 @@ export class Permissions<T> {
       effect: permission.type,
       subject: permission.subject,
       action: permission.action,
-      object: permission.object,
+      object: String(permission.object),
       fields: permission.fields,
       conditions:
         permission.conditions.length > 0 ? permission.conditions : undefined,
@@ -178,42 +204,50 @@ export class Permissions<T> {
   }
 
   /**
-   * Creates a Permissions instance from a DTO
-   * @template T The type of data that permissions will be checked against
-   * @param dto The DTO to create permissions from
-   * @param validate Whether to validate the DTO using zod schema
+   * Creates a new Permissions instance from a DTO
+   * @template T The record type mapping resource types to their data types
+   * @param dto The DTO to create from
    * @returns Permissions<T> A new Permissions instance
    * @throws PermissionValidationError if the DTO is invalid
    */
-  static fromDTO<T>(dto: unknown, validate = false): Permissions<T> {
-    try {
-      const parsedDTO = validate
-        ? validateDTO(dto, true)
-        : (dto as PermissionsDTO);
-
-      const permissions: Array<Permission<T, any>> = parsedDTO.rules.map(
-        (rule) => ({
-          type: rule.effect,
-          subject: rule.subject,
-          action: rule.action,
-          object: rule.object,
-          fields: rule.fields,
-          conditions: (rule.conditions || []).map(
-            (condition) =>
-              ({
-                field: condition.field,
-                operator: condition.operator,
-                value: condition.value,
-              } as Condition<T, PathsToStringProps<T>>)
-          ),
-        })
-      );
-
-      return new Permissions<T>(permissions);
-    } catch (error) {
-      throw new PermissionValidationError(
-        error instanceof Error ? error.message : "Invalid permissions DTO"
-      );
+  static fromDTO<T extends Record<string, any>>(dto: unknown): Permissions<T> {
+    if (
+      !dto ||
+      typeof dto !== "object" ||
+      !("version" in dto) ||
+      !("rules" in dto) ||
+      dto.version !== 1 ||
+      !Array.isArray(dto.rules)
+    ) {
+      throw new PermissionValidationError("Invalid permissions DTO format");
     }
+
+    const permissions = dto.rules.map((rule) => {
+      if (
+        !rule ||
+        typeof rule !== "object" ||
+        !("effect" in rule) ||
+        !("subject" in rule) ||
+        !("action" in rule) ||
+        !("object" in rule) ||
+        !("fields" in rule) ||
+        !Array.isArray(rule.fields)
+      ) {
+        throw new PermissionValidationError("Invalid permission rule format");
+      }
+
+      return {
+        type: rule.effect as "allow" | "deny",
+        subject: rule.subject,
+        action: rule.action as string,
+        object: rule.object as keyof T,
+        fields: rule.fields as string[],
+        conditions: (rule.conditions || []) as Array<
+          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
+        >,
+      };
+    });
+
+    return new Permissions<T>(permissions);
   }
 }
