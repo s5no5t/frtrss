@@ -173,45 +173,36 @@ class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
    * Adds a condition to the permission rule
    * @template P The type of the field path
    * @param condition The condition to add
-   * @returns PermissionBuilder<T> The main permission builder
+   * @returns this The current condition builder for chaining
    */
   when<P extends PathsToStringProps<T[O]>>(
     condition: Condition<T[O], P>
-  ): PermissionBuilder<T> {
+  ): ConditionBuilder<T, S, O> {
     this.conditions.push(condition);
-    for (const action of this.actions) {
-      this.builder.addPermission<S>({
-        subject: this.subject,
-        action,
-        object: this.object,
-        fields: this.fields,
-        conditions: this.conditions as unknown as Array<
-          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
-        >,
-        type: this.type,
-      });
-    }
-    return this.builder;
+    this.addPermission();
+    return this;
   }
 
   /**
-   * Finalizes the current permission rule and returns to the main builder for chaining additional rules
-   * @returns PermissionBuilder<T> The main permission builder for chaining additional rules
+   * Starts building an allow permission rule
+   * @template S2 The type of the subject
+   * @param subject The subject to allow
+   * @returns ActionBuilder<T, S2> A builder for specifying the allowed actions
    */
-  and(): PermissionBuilder<T> {
-    for (const action of this.actions) {
-      this.builder.addPermission<S>({
-        subject: this.subject,
-        action,
-        object: this.object,
-        fields: this.fields,
-        conditions: this.conditions as unknown as Array<
-          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
-        >,
-        type: this.type,
-      });
-    }
-    return this.builder;
+  allow<S2>(subject: S2): ActionBuilder<T, S2> {
+    this.addPermission();
+    return new ActionBuilder<T, S2>(this.builder, subject, "allow");
+  }
+
+  /**
+   * Starts building a deny permission rule
+   * @template S2 The type of the subject
+   * @param subject The subject to deny
+   * @returns ActionBuilder<T, S2> A builder for specifying the denied actions
+   */
+  deny<S2>(subject: S2): ActionBuilder<T, S2> {
+    this.addPermission();
+    return new ActionBuilder<T, S2>(this.builder, subject, "deny");
   }
 
   /**
@@ -219,6 +210,11 @@ class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
    * @returns Permissions<T> A new Permissions instance
    */
   build(): Permissions<T> {
+    this.addPermission();
+    return this.builder.build();
+  }
+
+  private addPermission(): void {
     for (const action of this.actions) {
       this.builder.addPermission<S>({
         subject: this.subject,
@@ -231,6 +227,5 @@ class ConditionBuilder<T extends Record<string, any>, S, O extends keyof T> {
         type: this.type,
       });
     }
-    return this.builder.build();
   }
 }
