@@ -22,6 +22,14 @@ A type-safe attribute-based access control (ABAC) authorization library for Type
 npm install frtrss
 ```
 
+Zod is an optional peer dependency. If you want to use schema validation (recommended), install zod:
+
+```bash
+npm install zod
+```
+
+If you don't install zod, frtrss will fall back to basic runtime validation.
+
 ## Basic Usage
 
 ```typescript
