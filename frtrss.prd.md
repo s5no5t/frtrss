@@ -868,7 +868,7 @@ interface ResourceTypes {
   project: Project;
 }
 
-const recordPermissions = new PermissionBuilder<ResourceTypes>()
+const permissions = new PermissionBuilder<ResourceTypes>()
   .allow({ role: "editor" })
   .to(["read", "write"])
   .on("document")
@@ -879,53 +879,17 @@ const recordPermissions = new PermissionBuilder<ResourceTypes>()
     value: "draft"
   })
   .build();
-```
 
-### 3.5 Example Usage with Discriminated Union
-
-```typescript
-// Using discriminated union
-interface Document {
-  type: "document";
-  id: string;
-  title: string;
-  content: string;
-  status: "draft" | "published";
-}
-
-interface Project {
-  type: "project";
-  id: string;
-  name: string;
-  members: string[];
-  visibility: "public" | "private";
-}
-
-type Resources = Document | Project;
-
-const unionPermissions = new PermissionBuilder<Resources>()
-  .allow({ role: "editor" })
-  .to(["read", "write"])
-  .on("document")  // Type-safe: only "document" | "project" allowed
-  .fields(["title", "content"])  // Type-safe: only Document fields allowed
-  .when({
-    field: "status",
-    operator: "eq",
-    value: "draft"
-  })
-  .build();
-
-// Both approaches provide full type safety
-const doc: Document = {
-  type: "document",
+// Type-safe permission checks
+const doc = {
   id: "1",
   title: "Hello",
   content: "World",
   status: "draft"
 };
 
-// Works with both record and union approaches
-const canEdit = unionPermissions.check({
+// Works with record type approach
+const canEdit = permissions.check({
   subject: { role: "editor" },
   action: "write",
   object: "document",
@@ -933,3 +897,6 @@ const canEdit = unionPermissions.check({
   data: doc
 });
 ```
+
+### 3.5 Example Usage with Public Access
+// ... existing code ...

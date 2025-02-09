@@ -2,8 +2,27 @@ import { Permission, Condition, PathsToStringProps } from "./types";
 import { Permissions } from "./permissions";
 
 /**
- * A fluent builder for creating permission rules
- * @template T The record type mapping object types to their data types
+ * A fluent builder for creating permission rules in a type-safe manner.
+ * This builder allows you to construct permission rules step-by-step, specifying the subject, action, object, fields, and conditions.
+ * It ensures that the rules are correctly structured and validated at compile-time, making it easier to manage complex permission systems.
+ * 
+ * Example usage:
+ * ```typescript
+ * const permissions = new PermissionBuilder<{ document: Document; article: Article }>()
+ *   .allow<User>({ id: "1", role: "editor" })
+ *   .to("read")
+ *   .on("document")
+ *   .fields(["metadata.title", "content"])
+ *   .when({
+ *     field: "metadata.status",
+ *     operator: "eq",
+ *     value: "published",
+ *   })
+ *   .build();
+ * ```
+ * 
+ * @template T The record type mapping object types to their data types. This type parameter is used to ensure that the builder is aware of the structure of the objects being protected by the permission rules.
+ * For example, if you have objects of type `Document` and `Article`, you would define `T` as `{ document: Document; article: Article; }`.
  */
 export class PermissionBuilder<T extends Record<string, any>> {
   private permissions: Array<Permission<T, any>> = [];
@@ -45,7 +64,7 @@ export class PermissionBuilder<T extends Record<string, any>> {
   }
 
   /**
-   * Builds and returns a Permissions instance with all added rules
+   * Builds and returns a Permissions instance with all added rules. This method should be called after all allow/deny rules have been specified.
    * @returns Permissions<T> A new Permissions instance
    */
   build(): Permissions<T> {

@@ -11,8 +11,32 @@
 
 ## Public API Methods
 
-### `PermissionBuilder<T>`
-The `PermissionBuilder` class is the main entry point for creating your permission policies. It is a generic builder that lets you configure permissions based on a resource type `T`. All methods return the builder instance, allowing for fluent method chaining.
+/**
+ * A fluent builder for creating permission rules in a type-safe manner.
+ * This builder allows you to construct permission rules step-by-step, specifying the subject, action, object, fields, and conditions.
+ * It ensures that the rules are correctly structured and validated at compile-time, making it easier to manage complex permission systems.
+ * 
+ * Example usage:
+ * ```typescript
+ * const permissions = new PermissionBuilder<{ document: Document; article: Article }>()
+ *   .allow<User>({ id: "1", role: "editor" })
+ *   .to("read")
+ *   .on("document")
+ *   .fields(["metadata.title", "content"])
+ *   .when({
+ *     field: "metadata.status",
+ *     operator: "eq",
+ *     value: "published",
+ *   })
+ *   .build();
+ * ```
+ * 
+ * @template T The record type mapping object types to their data types. This type parameter is used to ensure that the builder is aware of the structure of the objects being protected by the permission rules.
+ * For example, if you have objects of type `Document` and `Article`, you would define `T` as `{ document: Document; article: Article; }`.
+ */
+
+### `PermissionBuilder<T extends Record<string, any>>`
+The `PermissionBuilder` class is the main entry point for creating your permission policies. It is a generic builder that lets you configure permissions based on a record type `T` that maps object types to their data types. All methods return the builder instance, allowing for fluent method chaining.
 
 **Public Methods:**
 
@@ -20,7 +44,7 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   Registers a subject (for example, a user or service) that is allowed permission.  
   _Usage:_  
   ```typescript
-  new PermissionBuilder<Document>()
+  new PermissionBuilder<{ document: Document }>()
     .allow({ id: "1", role: "editor" })    // Start building a permission rule
     // ... chain other methods to complete the rule ...
   ```
@@ -29,7 +53,7 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   Registers a wildcard permission that applies to all subjects. This is useful for defining public access rules.  
   _Usage:_  
   ```typescript
-  new PermissionBuilder<Document>()
+  new PermissionBuilder<{ document: Document }>()
     .allowAll()                            // Start building a public access rule
     // ... chain other methods to complete the rule ...
   ```
@@ -38,13 +62,13 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   Registers a subject that is explicitly denied permission. Deny rules take precedence over allow rules.  
   _Usage:_  
   ```typescript
-  new PermissionBuilder<Document>()
+  new PermissionBuilder<{ document: Document }>()
     .deny({ id: "2", role: "user" })       // Start building a deny rule
     // ... chain other methods to complete the rule ...
   ```
 
-- **`to(action: string): PermissionBuilder<T>`**  
-  Specifies the action that the permission applies to (e.g., "read", "write"). Can accept either a single action string or an array of actions.  
+- **`to(action: string | string[]): PermissionBuilder<T>`**  
+  Specifies the action(s) that the permission applies to (e.g., "read", "write"). Can accept either a single action string or an array of actions.  
   _Usage:_  
   ```typescript
   // ... after allow() or deny() ...
@@ -56,16 +80,16 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
     // ... continue chaining ...
   ```
 
-- **`on(object: string): PermissionBuilder<T>`**  
-  Defines the resource (object) the permission is related to, like "Document".  
+- **`on<O extends keyof T>(object: O): PermissionBuilder<T>`**  
+  Defines the resource (object) the permission is related to. The object must be a key of the type mapping record T.  
   _Usage:_  
   ```typescript
   // ... after to() ...
-    .on("Document")                        // Chain the target object
+    .on("document")                        // Chain the target object
     // ... continue chaining ...
   ```
 
-- **`fields(fieldList: string[]): PermissionBuilder<T>`**  
+- **`fields(fieldList: Array<PathsToStringProps<T[O]>>): PermissionBuilder<T>`**  
   Restricts the permission to specific fields of the target resource. Field paths are provided as an array of strings. Supports wildcards for flexible field matching.  
   _Usage:_  
   ```typescript
@@ -89,7 +113,8 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   ```
 
 - **`when(condition: { field: string, operator: string, value: any }): PermissionBuilder<T>`**  
-  Adds an attribute-based condition to refine the permission. The condition is applied against the resource's data properties.  
+  Adds an attribute-based condition to refine the permission. Multiple `when()` calls can be chained to create AND conditions.
+  The conditions are applied against the resource's data properties.
   
   Available operators:
   - Comparison Operators:
@@ -108,11 +133,16 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   _Usage:_  
   ```typescript
   // ... after fields() ...
-    // Chain a comparison condition
+    // Chain multiple conditions (AND)
     .when({
       field: "metadata.status",
       operator: "eq",
       value: "published",
+    })
+    .when({
+      field: "metadata.version",
+      operator: "gte",
+      value: 2,
     })
     // ... continue chaining ...
 
@@ -133,7 +163,7 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
     // ... continue chaining ...
   ```
 
-- **`build(): PermissionPolicy`**  
+- **`build(): Permissions<T>`**  
   Finalizes and constructs the permission policy based on the configured rules.  
   _Usage:_  
   ```typescript
@@ -141,7 +171,7 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
     .build()                               // End the chain and build the policy
   ```
 
-- **`check(options: { subject: any, action: string, object: string, field: string, data: any }): boolean`**  
+- **`check(options: { subject: any, action: string, object: keyof T, field: string, data: T[keyof T] }): boolean`**  
   Evaluates whether a given subject is permitted to perform the specified action on the object/field, based on the built policy.  
   _Usage:_  
   ```typescript
@@ -149,7 +179,7 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   const canRead = permissions.check({
     subject: { id: "1", role: "editor" },
     action: "read",
-    object: "Document",
+    object: "document",
     field: "content",
     data: { metadata: { status: "published" } },
   });
@@ -180,17 +210,22 @@ interface Document {
   content: string;
 }
 
+// Define the object type mapping
+type ObjectTypes = {
+  document: Document;
+};
+
 // Build a permission policy using method chaining
-const permissions = new PermissionBuilder<Document>()
+const permissions = new PermissionBuilder<ObjectTypes>()
   .allow<User>({ id: "1", role: "editor" })  // Start with allowing a subject
   .to("read")                                // Chain the action
-  .on("Document")                            // Chain the target object
+  .on("document")                            // Chain the target object
   .build();                                  // End chain and build the policy
 
 const canRead = permissions.check({
   subject: { id: "1", role: "editor" },
   action: "read",
-  object: "Document",
+  object: "document",
   field: "", // No field-specific restriction
   data: {}   // Object data not needed for this basic check
 });
@@ -199,12 +234,74 @@ console.log(`User can read Document: ${canRead}`);
 ```
 
 **Explanation:**  
-This example sets up a basic permission allowing a user with `{ id: "1", role: "editor" }` to perform the "read" action on the "Document" resource. The `check` method returns a boolean indicating whether the operation is permitted.
+This example sets up a basic permission allowing a user with `{ id: "1", role: "editor" }` to perform the "read" action on the "document" resource. The `check` method returns a boolean indicating whether the operation is permitted.
 
 ---
 
-### 2. Field-level Permission
-Often you may wish to restrict access to only certain parts or fields of a resource rather than the entire object.
+### 2. Field-level Permission with Multiple Conditions
+Often you may wish to restrict access to only certain parts or fields of a resource and apply multiple conditions that must all be met.
+
+**Example Code:**
+```typescript
+import { PermissionBuilder } from "frtrss";
+
+interface Document {
+  id: string;
+  metadata: {
+    title: string;
+    status: "draft" | "published" | "archived";
+    version: number;
+  };
+  content: string;
+}
+
+type ObjectTypes = {
+  document: Document;
+};
+
+const permissions = new PermissionBuilder<ObjectTypes>()
+  .allow({ id: "2", role: "editor" })
+  .to("read")
+  .on("document")
+  .fields(["metadata.title", "content"])
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "published",
+  })
+  .when({
+    field: "metadata.version",
+    operator: "gte",
+    value: 2,
+  })
+  .build();
+
+const canReadTitle = permissions.check({
+  subject: { id: "2", role: "editor" },
+  action: "read",
+  object: "document",
+  field: "metadata.title",
+  data: {
+    metadata: { 
+      status: "published",
+      version: 3
+    },
+  },
+});
+
+console.log(`User can read title: ${canReadTitle}`);
+```
+
+**Explanation:**  
+Here, the permission is narrowed down to specific fields within the `Document` and requires multiple conditions to be met. The access is only granted if:
+1. The field being accessed is either "metadata.title" or "content"
+2. The document's status is "published" AND
+3. The document's version is greater than or equal to 2
+
+---
+
+### 3. Multiple Resource Types with Allow/Deny Rules
+For more complex cases, you can define permissions across different resource types and combine allow and deny rules.
 
 **Example Code:**
 ```typescript
@@ -219,32 +316,81 @@ interface Document {
   content: string;
 }
 
-const permissions = new PermissionBuilder<Document>()
-  .allow({ id: "2", role: "editor" })
+interface Article {
+  id: string;
+  title: string;
+  status: "draft" | "published";
+  content: string;
+}
+
+type ObjectTypes = {
+  document: Document;
+  article: Article;
+};
+
+const permissions = new PermissionBuilder<ObjectTypes>()
+  // Allow editor to read and write all document fields
+  .allow<User>({ id: "1", role: "editor" })
+  .to(["read", "write"])
+  .on("document")
+  .allFields()
+  // But deny write access to document status
+  .deny<User>({ id: "1", role: "editor" })
+  .to("write")
+  .on("document")
+  .fields(["metadata.status"])
+  // Allow read access to published articles
+  .allow<User>({ id: "1", role: "editor" })
   .to("read")
-  .on("Document")
-  .fields(["metadata.title", "content"])
+  .on("article")
+  .allFields()
+  .when({
+    field: "status",
+    operator: "eq",
+    value: "published",
+  })
   .build();
 
-const canReadTitle = permissions.check({
-  subject: { id: "2", role: "editor" },
-  action: "read",
-  object: "Document",
-  field: "metadata.title",
-  data: {
-    metadata: { status: "published" },
-  },
+// Check document permissions
+const canWriteContent = permissions.check({
+  subject: { id: "1", role: "editor" },
+  action: "write",
+  object: "document",
+  field: "content",
+  data: {},
 });
 
-console.log(`User can read title: ${canReadTitle}`);
+const canWriteStatus = permissions.check({
+  subject: { id: "1", role: "editor" },
+  action: "write",
+  object: "document",
+  field: "metadata.status",
+  data: {},
+});
+
+// Check article permissions
+const canReadArticle = permissions.check({
+  subject: { id: "1", role: "editor" },
+  action: "read",
+  object: "article",
+  field: "content",
+  data: { status: "published" },
+});
+
+console.log(`Can write document content: ${canWriteContent}`); // true
+console.log(`Can write document status: ${canWriteStatus}`);   // false
+console.log(`Can read published article: ${canReadArticle}`);  // true
 ```
 
 **Explanation:**  
-Here, the permission is narrowed down to only specific fields within the `Document`, namely "metadata.title" and "content". Even if the user is permitted for the "read" action, the access will only be valid for these declared fields.
+This example demonstrates several advanced features:
+1. Multiple resource types (`Document` and `Article`) in a single permission system
+2. Combination of allow and deny rules, where deny takes precedence
+3. Different conditions for different resource types
+4. Array of actions in a single rule
+5. Use of `allFields()` for broad access
 
----
-
-### 3. Attribute-Based Access Control (ABAC)
+### 4. Attribute-Based Access Control (ABAC)
 For more dynamic cases, you can enforce conditions that depend on the attributes of the target resource, ensuring that permissions only apply when certain conditions are met.
 
 **Example Code:**
@@ -260,10 +406,10 @@ interface Document {
   content: string;
 }
 
-const permissions = new PermissionBuilder<Document>()
+const permissions = new PermissionBuilder<{ document: Document }>()
   .allow({ id: "3", role: "editor" })
   .to("read")
-  .on("Document")
+  .on("document")
   .fields(["metadata.title", "content"])
   .when({
     field: "metadata.status",
@@ -275,7 +421,7 @@ const permissions = new PermissionBuilder<Document>()
 const canReadContent = permissions.check({
   subject: { id: "3", role: "editor" },
   action: "read",
-  object: "Document",
+  object: "document",
   field: "content",
   data: {
     metadata: { status: "published" },
@@ -289,114 +435,6 @@ console.log(`User can read content: ${canReadContent}`);
 This use case extends the field-level permission by introducing an attribute-based rule. The permission for reading the "content" field is granted only if the document's `metadata.status` equals "published". This type of rule is helpful for enforcing extra layers of security via runtime data conditions.
 
 ---
-
-### 4. Multiple Subject Types
-In real-world applications, you often need to handle different types of subjects (e.g., application users, service accounts, API clients) with different attributes and permission requirements.
-
-**Example Code:**
-```typescript
-import { PermissionBuilder } from "frtrss";
-
-// Define different subject types
-interface ApplicationUser {
-  type: "user";
-  id: string;
-  role: "admin" | "editor" | "viewer";
-  department: string;
-}
-
-interface ServiceAccount {
-  type: "service";
-  serviceId: string;
-  permissions: string[];
-  environment: "development" | "production";
-}
-
-interface Document {
-  id: string;
-  metadata: {
-    title: string;
-    status: "draft" | "published" | "archived";
-    department: string;
-  };
-  content: string;
-}
-
-// Create separate permission builders for different subject types
-const permissions = new PermissionBuilder<Document>()
-  // Allow application users from the same department
-  .allow<ApplicationUser>({ 
-    type: "user",
-    id: "user-1",
-    role: "editor",
-    department: "engineering"
-  })
-  .to("write")
-  .on("Document")
-  .when({
-    field: "metadata.department",
-    operator: "eq",
-    value: "engineering"
-  })
-  // Allow service accounts in production
-  .allow<ServiceAccount>({
-    type: "service",
-    serviceId: "backup-service",
-    permissions: ["read_all"],
-    environment: "production"
-  })
-  .to("read")
-  .on("Document")
-  .build();
-
-// Check permissions for an application user
-const canUserWrite = permissions.check({
-  subject: {
-    type: "user",
-    id: "user-1",
-    role: "editor",
-    department: "engineering"
-  },
-  action: "write",
-  object: "Document",
-  field: "content",
-  data: {
-    metadata: { 
-      department: "engineering",
-      status: "draft"
-    }
-  }
-});
-
-// Check permissions for a service account
-const canServiceRead = permissions.check({
-  subject: {
-    type: "service",
-    serviceId: "backup-service",
-    permissions: ["read_all"],
-    environment: "production"
-  },
-  action: "read",
-  object: "Document",
-  field: "content",
-  data: {
-    metadata: { 
-      department: "engineering",
-      status: "published"
-    }
-  }
-});
-
-console.log(`Application user can write: ${canUserWrite}`);
-console.log(`Service account can read: ${canServiceRead}`);
-```
-
-**Explanation:**  
-This example demonstrates how to handle different types of subjects with distinct attributes and permission requirements:
-- Application users are granted write access only to documents within their department
-- Service accounts are given read-only access across all departments when running in production
-- Each subject type has its own set of attributes that can be used in permission rules
-- The permission builder can handle multiple subject types in a type-safe manner using TypeScript generics
 
 ### 5. Storing and Loading Permissions
 
@@ -417,10 +455,10 @@ interface Document {
 }
 
 // Create permissions using the builder
-const permissions = new PermissionBuilder<Document>()
+const permissions = new PermissionBuilder<{ document: Document }>()
   .allow({ id: "1", role: "editor" })
   .to("read")
-  .on("Document")
+  .on("document")
   .fields(["metadata.title", "content"])
   .when({
     field: "metadata.status",
@@ -441,13 +479,13 @@ const loadedDTO = JSON.parse(jsonString);
 
 // Create a new Permissions instance from the DTO
 // Optional validation can be enabled by passing true as the second argument
-const loadedPermissions = Permissions.fromDTO<Document>(loadedDTO, true);
+const loadedPermissions = Permissions.fromDTO<{ document: Document }>(loadedDTO, true);
 
 // Use the loaded permissions
 const canRead = loadedPermissions.check({
   subject: { id: "1", role: "editor" },
   action: "read",
-  object: "Document",
+  object: "document",
   field: "content",
   data: {
     metadata: { status: "published" }
@@ -503,7 +541,7 @@ console.log(`Can read document: ${canRead}`); // true
    - Maintains type information during deserialization
    - Generic type parameter ensures type safety when using loaded permissions
    ```typescript
-   const typedPermissions = Permissions.fromDTO<Document>(dto);
+   const typedPermissions = Permissions.fromDTO<{ document: Document }>(dto);
    ```
 
 5. **Error Handling**
