@@ -8,6 +8,11 @@ interface User {
   role: "admin" | "editor" | "user";
 }
 
+interface Reviewer {
+  id: string;
+  role: "reviewer";
+}
+
 interface Document {
   id: string;
   metadata: {
@@ -21,7 +26,7 @@ interface Document {
     name: string;
     email: string;
   };
-  reviewers: string[];
+  reviewers: Array<string | Reviewer>;
 }
 
 describe("Permissions Serialization", () => {
@@ -142,5 +147,137 @@ describe("Permissions Serialization", () => {
     });
 
     expect(result).toBe(true);
+  });
+});
+
+describe("Permissions Field Matching", () => {
+  it("should handle field path length mismatches", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["metadata"])
+      .and()
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "metadata.title",
+      data: {} as Document,
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("should handle array wildcards in field paths", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["reviewers.*"])
+      .and()
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "reviewers.0",
+      data: { reviewers: ["user1", "user2"] } as Document,
+    });
+
+    expect(result).toBe(true);
+  });
+});
+
+describe("Permissions Array Conditions", () => {
+  it("should handle object comparison in arrays for 'in' operator", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["reviewers"])
+      .when({
+        field: "reviewers",
+        operator: "in",
+        value: { id: "user1", role: "reviewer" },
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "reviewers",
+      data: {
+        reviewers: [
+          { id: "user1", role: "reviewer" },
+          { id: "user2", role: "reviewer" },
+        ],
+      } as any,
+    });
+
+    expect(result).toBe(true);
+
+    const resultFalse = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "reviewers",
+      data: {
+        reviewers: [
+          { id: "user3", role: "reviewer" },
+          { id: "user4", role: "reviewer" },
+        ],
+      } as any,
+    });
+
+    expect(resultFalse).toBe(false);
+  });
+
+  it("should handle object comparison in arrays for 'nin' operator", () => {
+    const permissions = new PermissionBuilder<Document>()
+      .allow<User>({ id: "1", role: "editor" })
+      .to("read")
+      .on("Document")
+      .fields(["reviewers"])
+      .when({
+        field: "reviewers",
+        operator: "nin",
+        value: { id: "user1", role: "reviewer" },
+      })
+      .build();
+
+    const result = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "reviewers",
+      data: {
+        reviewers: [
+          { id: "user2", role: "reviewer" },
+          { id: "user3", role: "reviewer" },
+        ],
+      } as any,
+    });
+
+    expect(result).toBe(true);
+
+    const resultFalse = permissions.check({
+      subject: { id: "1", role: "editor" },
+      action: "read",
+      object: "Document",
+      field: "reviewers",
+      data: {
+        reviewers: [
+          { id: "user1", role: "reviewer" },
+          { id: "user2", role: "reviewer" },
+        ],
+      } as any,
+    });
+
+    expect(resultFalse).toBe(false);
   });
 });
