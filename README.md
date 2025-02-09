@@ -45,15 +45,38 @@ interface Document {
   metadata: {
     title: string;
     status: "draft" | "published" | "archived";
+    version: number;
   };
   content: string;
 }
 
-const permissions = new PermissionBuilder<Document>()
+// Define the object type mapping
+type ObjectTypes = {
+  document: Document;
+};
+
+// Create permissions with allow and deny rules
+const permissions = new PermissionBuilder<ObjectTypes>()
+  // Allow editors to read published documents with version >= 2
   .allow<User>({ id: "1", role: "editor" })
-  .to("read")
-  .on("Document")
+  .to(["read", "write"])
+  .on("document")
   .fields(["metadata.title", "content"])
+  .when({
+    field: "metadata.status",
+    operator: "eq",
+    value: "published",
+  })
+  .when({
+    field: "metadata.version",
+    operator: "gte",
+    value: 2,
+  })
+  // But deny write access to published documents
+  .deny<User>({ id: "1", role: "editor" })
+  .to("write")
+  .on("document")
+  .fields(["content"])
   .when({
     field: "metadata.status",
     operator: "eq",
@@ -65,12 +88,28 @@ const permissions = new PermissionBuilder<Document>()
 const canRead = permissions.check({
   subject: { id: "1", role: "editor" },
   action: "read",
-  object: "Document",
+  object: "document",
   field: "content",
   data: {
-    metadata: { status: "published" },
+    metadata: { 
+      status: "published",
+      version: 3
+    },
   },
 }); // true
+
+const canWrite = permissions.check({
+  subject: { id: "1", role: "editor" },
+  action: "write",
+  object: "document",
+  field: "content",
+  data: {
+    metadata: { 
+      status: "published",
+      version: 3
+    },
+  },
+}); // false - denied by explicit deny rule
 ```
 
 ## API Documentation & Use Cases
