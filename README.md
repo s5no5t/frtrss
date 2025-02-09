@@ -2,7 +2,7 @@
 
 ![frtrss logo](logo.png)
 
-A type-safe, attribute-based access control (ABAC) authorization library for TypeScript applications.
+A type-safe attribute-based access control (ABAC) authorization library for TypeScript applications.
 
 ## Features
 
