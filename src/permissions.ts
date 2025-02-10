@@ -9,6 +9,7 @@ import {
   DeepPartial,
   ResourceDefinition,
   ResourceType,
+  ResourceActions,
 } from "./types";
 
 /**
@@ -73,7 +74,7 @@ export class Permissions<
    */
   checkObject<O extends keyof T>(
     subject: any,
-    action: string,
+    action: ResourceActions<T, O>,
     object: O,
     data: ResourceType<T, O>
   ): boolean {
