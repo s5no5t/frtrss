@@ -74,6 +74,27 @@ export type NestedPaths<T> = T extends object
 export type PathsToStringProps<T> = T extends object ? NestedPaths<T> : never;
 
 /**
+ * Gets the type of a direct property access (no dots in path)
+ * @template T The object type
+ * @template P The property key
+ * @internal
+ */
+type DirectPropertyType<T, P> = P extends keyof T ? T[P] : never;
+
+/**
+ * Gets the type of a nested property access (path contains dots)
+ * @template T The object type
+ * @template K The first key in the path
+ * @template R The rest of the path
+ * @internal
+ */
+type NestedPropertyType<
+  T,
+  K extends string,
+  R extends string
+> = K extends keyof T ? ValueAtPath<T[K], R> : never;
+
+/**
  * Gets the type of a value at a specific path in an object type using dot notation
  * @template T The object type to traverse
  * @template P The dot-notation path to the value (e.g. "user.address.street")
@@ -108,13 +129,9 @@ export type PathsToStringProps<T> = T extends object ? NestedPaths<T> : never;
  * type Invalid1 = ValueAtPath<User, "nonexistent">; // never
  * type Invalid2 = ValueAtPath<User, "name.invalid">; // never (can't traverse primitive)
  */
-export type ValueAtPath<T, P extends string> = P extends keyof T
-  ? T[P]
-  : P extends `${infer K}.${infer R}`
-  ? K extends keyof T
-    ? ValueAtPath<T[K], R>
-    : never
-  : never;
+export type ValueAtPath<T, P extends string> = P extends `${infer K}.${infer R}`
+  ? NestedPropertyType<T, K, R>
+  : DirectPropertyType<T, P>;
 
 export type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
 export type ArrayMembershipOperator = "in" | "nin";
