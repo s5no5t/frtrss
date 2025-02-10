@@ -38,15 +38,40 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-export type PathsToStringProps<T> = T extends object
+/**
+ * Extracts property keys from an object type that are strings
+ * @template T The object type to extract keys from
+ */
+export type PropertyKey<T> = keyof T & string;
+
+/**
+ * Generates nested path strings for object properties (e.g. "user.address.street")
+ * Includes both direct object properties and their nested paths
+ * @template T The object type to generate paths for
+ */
+export type NestedPaths<T> = T extends object
   ? {
-      [K in keyof T]: K extends string
-        ? T[K] extends object
-          ? K | `${K}.${PathsToStringProps<T[K]>}`
-          : K
-        : never;
-    }[keyof T]
+      [K in PropertyKey<T>]: T[K] extends object
+        ? `${K}` | `${K}.${NestedPaths<T[K]>}`
+        : `${K}`;
+    }[PropertyKey<T>]
   : never;
+
+/**
+ * Generates all possible property paths for an object type
+ * Includes both top-level properties and nested paths in dot notation
+ * @template T The object type to generate paths for
+ * @example
+ * type User = {
+ *   name: string;
+ *   address: {
+ *     street: string;
+ *     city: string;
+ *   };
+ * };
+ * // PathsToStringProps<User> = "name" | "address" | "address.street" | "address.city"
+ */
+export type PathsToStringProps<T> = T extends object ? NestedPaths<T> : never;
 
 export type ValueAtPath<T, P extends string> = P extends keyof T
   ? T[P]
