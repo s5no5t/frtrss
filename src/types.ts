@@ -57,32 +57,27 @@ export type ValueAtPath<T, P extends string> = P extends keyof T
   : never;
 
 export type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
-export type ArrayOperator = "in" | "nin" | "size";
+export type ArrayMembershipOperator = "in" | "nin";
+export type ArrayOperator = ArrayMembershipOperator;
 export type Operator = ComparisonOperator | ArrayOperator;
 
-export type ArraySizeCondition<T, P extends PathsToStringProps<T>> = {
+export type ArrayMembershipCondition<T, P extends PathsToStringProps<T>> = {
   field: P;
-  operator: "size";
-  value: number;
-};
-
-export type ArrayValueCondition<T, P extends PathsToStringProps<T>> = {
-  field: P;
-  operator: "in" | "nin";
+  operator: ArrayMembershipOperator;
   value: ValueAtPath<T, P> extends Array<infer E> ? E : never;
 };
 
 export type ValueCondition<T, P extends PathsToStringProps<T>> = {
   field: P;
   operator: ComparisonOperator;
-  value: ValueAtPath<T, P>;
+  value: ValueAtPath<T, P> extends Array<any> ? never : ValueAtPath<T, P>;
 };
 
 export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<
   T,
   P
 > extends Array<any>
-  ? ArraySizeCondition<T, P> | ArrayValueCondition<T, P>
+  ? ArrayMembershipCondition<T, P>
   : ValueCondition<T, P>;
 
 /**
@@ -123,20 +118,22 @@ export type Permission<
 /**
  * Parameters for checking a permission
  * @template T The record type mapping resource types to their definitions
+ * @template O The type of the object (keyof T)
  */
 export type PermissionCheck<
-  T extends Record<string, ResourceDefinition<any, any>>
+  T extends Record<string, ResourceDefinition<any, any>>,
+  O extends keyof T = keyof T
 > = {
   /** The subject requesting access */
   subject: any;
   /** The action being performed */
-  action: string;
+  action: ResourceActions<T, O>;
   /** The object being accessed */
-  object: keyof T;
+  object: O;
   /** The field being accessed */
   field: string;
   /** The data being evaluated */
-  data: DeepPartial<ResourceType<T, keyof T>>;
+  data: DeepPartial<ResourceType<T, O>>;
 };
 
 // Serialization types

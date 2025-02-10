@@ -128,7 +128,6 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
   - Array Operators:
     - `in`: Contains - checks if the specified value exists in an array field
     - `nin`: Not contains - checks if the specified value does not exist in an array field
-    - `size`: Array length - checks if the array field's length matches the specified value (must be a number)
 
   _Usage:_  
   ```typescript
@@ -151,14 +150,6 @@ The `PermissionBuilder` class is the main entry point for creating your permissi
       field: "reviewers",
       operator: "in",
       value: "user123",
-    })
-    // ... continue chaining ...
-
-    // Chain a size condition
-    .when({
-      field: "tags",
-      operator: "size",
-      value: 3,
     })
     // ... continue chaining ...
   ```

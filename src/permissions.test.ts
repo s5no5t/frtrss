@@ -1,15 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { Permissions } from "./permissions";
-import { PermissionValidationError } from "./types";
+import { PermissionValidationError, ResourceDefinition } from "./types";
 
 interface Document {
   status: string;
+  members: Array<{ userId: string; role: string }>;
   // other fields can be added as needed
 }
 
+type DocumentActions = "read" | "write";
+
+type ObjectTypes = {
+  document: ResourceDefinition<Document, DocumentActions>;
+};
+
 describe("Permissions Serialization", () => {
   it("should serialize and deserialize permissions correctly", () => {
-    const permissions = new Permissions<{ document: Document }>([
+    const permissions = new Permissions<ObjectTypes>([
       {
         subject: { id: "1", role: "admin" },
         action: "read",
@@ -163,7 +170,7 @@ describe("Permissions Field Matching", () => {
 
 describe("Permissions Array Conditions", () => {
   it("should handle object comparison in arrays for 'in' operator", () => {
-    const permissions = new Permissions<any>([
+    const permissions = new Permissions<ObjectTypes>([
       {
         subject: { id: "1", role: "admin" },
         action: "read",

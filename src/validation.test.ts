@@ -170,17 +170,7 @@ describe("validateDTO", () => {
     });
 
     it("should validate all valid condition operators", () => {
-      const operators = [
-        "eq",
-        "ne",
-        "in",
-        "nin",
-        "gt",
-        "gte",
-        "lt",
-        "lte",
-        "size",
-      ];
+      const operators = ["eq", "ne", "in", "nin", "gt", "gte", "lt", "lte"];
       operators.forEach((operator) => {
         const dto = {
           version: 1,

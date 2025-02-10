@@ -21,17 +21,7 @@ export function validateDTO(
     const permissionConditionSchema = z
       .object({
         field: z.string(),
-        operator: z.enum([
-          "eq",
-          "ne",
-          "in",
-          "nin",
-          "gt",
-          "gte",
-          "lt",
-          "lte",
-          "size",
-        ]),
+        operator: z.enum(["eq", "ne", "in", "nin", "gt", "gte", "lt", "lte"]),
         value: z.unknown(),
       })
       .strict();
@@ -97,17 +87,9 @@ function validateWithoutZod(dto: unknown): PermissionsDTO {
               c &&
               typeof c.field === "string" &&
               typeof c.operator === "string" &&
-              [
-                "eq",
-                "ne",
-                "in",
-                "nin",
-                "gt",
-                "gte",
-                "lt",
-                "lte",
-                "size",
-              ].includes(c.operator)
+              ["eq", "ne", "in", "nin", "gt", "gte", "lt", "lte"].includes(
+                c.operator
+              )
           )))
     ) {
       throw new Error("Invalid permissions DTO: rule validation failed");

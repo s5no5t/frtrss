@@ -163,8 +163,6 @@ export class Permissions<
                 : item === condition.value
             )
           );
-        case "size":
-          return Array.isArray(value) && value.length === condition.value;
         default:
           return false;
       }
