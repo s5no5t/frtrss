@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PermissionBuilder } from "./builders";
+import { ResourceDefinition } from "./types";
 
 interface User {
   id: string;
@@ -31,9 +32,12 @@ interface Article {
   authorId: string;
 }
 
+type DocumentActions = "read" | "write" | "update" | "delete" | "list";
+type ArticleActions = "read" | "write" | "publish" | "unpublish";
+
 type ObjectType = {
-  document: Document;
-  article: Article;
+  document: ResourceDefinition<Document, DocumentActions>;
+  article: ResourceDefinition<Article, ArticleActions>;
 };
 
 describe("PermissionBuilder", () => {

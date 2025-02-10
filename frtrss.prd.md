@@ -45,8 +45,10 @@ The package provides appropriate entry points for each environment through the `
 
 ```typescript
 type Subject = any; // User-definable type
-type Action = string; // Custom action string
-type Object = string; // Resource type identifier
+type ResourceDefinition<TData, TActions extends string> = {
+  data: TData;
+  actions: TActions;
+};
 type Field = string; // Dot-notation field path
 type Condition = {
   field: string;
@@ -62,6 +64,7 @@ type Condition = {
 - Deny rules override allow rules
 - Field-level permissions require explicit field specification
 - All conditions must be satisfied (AND logic)
+- Actions must be defined in the resource's action type
 
 ### 2.3 Public Access
 
@@ -104,15 +107,15 @@ type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-// Resource type mapping - supports both record and discriminated union types
-type ResourceTypeMap<T> = T extends { type: string }
-  ? Record<T["type"], T>
-  : T extends Record<string, any>
-  ? T
-  : never;
+// Resource definition with type-safe actions
+type ResourceDefinition<TData, TActions extends string = string> = {
+  data: TData;
+  actions: TActions;
+};
 
-// Helper type to extract the object type from a discriminator
-type ObjectType<T, D extends string> = Extract<T, { type: D }>;
+// Helper types for resource definitions
+type ResourceType<T, K extends keyof T> = T[K] extends ResourceDefinition<infer D, any> ? D : never;
+type ResourceActions<T, K extends keyof T> = T[K] extends ResourceDefinition<any, infer A> ? A : never;
 
 // Operator types based on value types
 type ComparisonOperator = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
@@ -142,40 +145,35 @@ export type Condition<T, P extends PathsToStringProps<T>> = ValueAtPath<T, P> ex
   ? ArraySizeCondition<T, P> | ArrayValueCondition<T, P>
   : ValueCondition<T, P>;
 
-// Type-safe builder for multiple resource types
-class PermissionBuilder<T> {
+// Type-safe builder for resource definitions
+class PermissionBuilder<T extends Record<string, ResourceDefinition<any, any>>> {
   allow<S>(subject: S): ActionBuilder<T, S>;
+  allowAll(): ActionBuilder<T, "*">;
   deny<S>(subject: S): ActionBuilder<T, S>;
   build(): Permissions<T>;
 }
 
-class ActionBuilder<T, S> {
-  // Accepts a single action or an array of actions
-  to(actions: string | string[]): ObjectBuilder<T, S>;
+class ActionBuilder<T extends Record<string, ResourceDefinition<any, any>>, S> {
+  // Type-safe actions based on resource definition
+  to<O extends keyof T>(
+    actions: ResourceActions<T, O> | ResourceActions<T, O>[]
+  ): ObjectBuilder<T, S>;
 }
 
-class ObjectBuilder<T, S> {
-  // Supports both record keys and discriminator values
-  on<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>>(
-    object: D
-  ): FieldBuilder<T extends { type: string } ? ObjectType<T, D> : ResourceTypeMap<T>[D], S, D>;
+class ObjectBuilder<T extends Record<string, ResourceDefinition<any, any>>, S> {
+  on<O extends keyof T>(object: O): FieldBuilder<T, S, O>;
 }
 
-class FieldBuilder<T, S, O> {
-  // Type-safe field paths using dot notation
-  fields<K extends keyof T>(
-    fields: Array<
-      K | `${string & K}.${string}` | `${string & K}.*.${string}` | "*"
-    >
-  ): ConditionBuilder<T, S, O>;
+class FieldBuilder<T extends Record<string, ResourceDefinition<any, any>>, S, O extends keyof T> {
+  fields(fields: Array<PathsToStringProps<ResourceType<T, O>>>): ConditionBuilder<T, S, O>;
   allFields(): ConditionBuilder<T, S, O>;
 }
 
-class ConditionBuilder<T, S, O> {
-  when<P extends PathsToStringProps<T>>(
-    condition: Condition<T, P>
-  ): PermissionBuilder<T>;
-  and(): PermissionBuilder<T>;
+class ConditionBuilder<T extends Record<string, ResourceDefinition<any, any>>, S, O extends keyof T> {
+  when<P extends PathsToStringProps<ResourceType<T, O>>>(
+    condition: Condition<ResourceType<T, O>, P>
+  ): ConditionBuilder<T, S, O>;
+  build(): Permissions<T>;
 }
 ```
 
@@ -183,24 +181,20 @@ class ConditionBuilder<T, S, O> {
 
 ```typescript
 // Type-safe permissions class
-class Permissions<T> {
-  check<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>>(params: {
+class Permissions<T extends Record<string, ResourceDefinition<any, any>>> {
+  check(params: {
     subject: any;
     action: string;
-    object: D;
+    object: keyof T;
     field: string;
-    data: T extends { type: string }
-      ? DeepPartial<ObjectType<T, D>>
-      : DeepPartial<ResourceTypeMap<T>[D]>;
+    data: DeepPartial<ResourceType<T, keyof T>>;
   }): boolean;
 
-  checkObject<D extends T extends { type: string } ? T["type"] : keyof ResourceTypeMap<T>, S>(
-    subject: S,
+  checkObject<O extends keyof T>(
+    subject: any,
     action: string,
-    object: D,
-    data: T extends { type: string }
-      ? ObjectType<T, D>
-      : ResourceTypeMap<T>[D]
+    object: O,
+    data: ResourceType<T, O>
   ): boolean;
 }
 ```
@@ -355,11 +349,19 @@ interface Document {
   lastModified: Date;
 }
 
-const permissions = new PermissionBuilder<Document>()
+// Define allowed actions
+type DocumentActions = "read" | "write" | "update" | "delete" | "archive";
+
+// Define resource type mapping
+type Resources = {
+  document: ResourceDefinition<Document, DocumentActions>;
+};
+
+const permissions = new PermissionBuilder<Resources>()
   // Multiple actions in a single rule
   .allow<User>({ id: "1", role: "editor" })
-  .to(["read", "list"])
-  .on("Document")
+  .to(["read", "update"])
+  .on("document")
   .fields(["metadata.title", "content", "author.name"])
   .when({
     field: "metadata.status",
@@ -369,7 +371,7 @@ const permissions = new PermissionBuilder<Document>()
   // Single action
   .allow<User>({ id: "1", role: "editor" })
   .to("write")
-  .on("Document")
+  .on("document")
   .fields(["metadata.title"])
   .when({
     field: "metadata.status",
@@ -379,7 +381,7 @@ const permissions = new PermissionBuilder<Document>()
   // Multiple actions with deny rule
   .deny<User>({ id: "1", role: "editor" })
   .to(["delete", "archive"])
-  .on("Document")
+  .on("document")
   .fields(["*"])
   .and()
   .build();
@@ -409,9 +411,9 @@ const user: User = {
 };
 
 // Type-safe permission checks
-const canRead = permissions.checkObject(user, "read", "Document", doc); // true
-const canList = permissions.checkObject(user, "list", "Document", doc); // true
-const canDelete = permissions.checkObject(user, "delete", "Document", doc); // false
+const canRead = permissions.checkObject(user, "read", "document", doc); // true
+const canUpdate = permissions.checkObject(user, "update", "document", doc); // true
+const canDelete = permissions.checkObject(user, "delete", "document", doc); // false
 ```
 
 ### 6.2 Example with multiple resource types
@@ -420,7 +422,6 @@ const canDelete = permissions.checkObject(user, "delete", "Document", doc); // f
 // Resource types
 interface Document {
   id: string;
-  type: "document";
   metadata: {
     title: string;
     status: "draft" | "published";
@@ -431,7 +432,6 @@ interface Document {
 
 interface Project {
   id: string;
-  type: "project";
   name: string;
   members: Array<{
     userId: string;
@@ -443,8 +443,15 @@ interface Project {
   };
 }
 
-// Union type for all resources
-type Resource = Document | Project;
+// Define allowed actions for each resource
+type DocumentActions = "read" | "write" | "delete";
+type ProjectActions = "read" | "write" | "manage" | "configure";
+
+// Define resource type mapping
+type Resources = {
+  document: ResourceDefinition<Document, DocumentActions>;
+  project: ResourceDefinition<Project, ProjectActions>;
+};
 
 // Subject type
 interface User {
@@ -452,20 +459,13 @@ interface User {
   role: "admin" | "user";
 }
 
-// Type helper to extract fields based on resource type
-type ResourceFields<T extends Resource> = T extends Document
-  ? FieldPath<Document>
-  : T extends Project
-  ? FieldPath<Project>
-  : never;
-
 // Usage example
-const permissions = new PermissionBuilder<Resource>()
+const permissions = new PermissionBuilder<Resources>()
   // Document permissions
   .allow<User>({ id: "1", role: "user" })
   .to("read")
   .on("document")
-  .fields<Document>(["metadata.title", "content"])
+  .fields(["metadata.title", "content"])
   .when({
     field: "metadata.status",
     operator: "eq",
@@ -476,7 +476,7 @@ const permissions = new PermissionBuilder<Resource>()
   .allow<User>({ id: "1", role: "user" })
   .to("read")
   .on("project")
-  .fields<Project>(["name", "members.*.userId", "settings.allowComments"])
+  .fields(["name", "members.*.userId", "settings.allowComments"])
   .when({
     field: "members",
     operator: "in",
@@ -486,10 +486,6 @@ const permissions = new PermissionBuilder<Resource>()
   // Admin permissions for both types
   .allow<User>({ id: "2", role: "admin" })
   .to("manage")
-  .on("document")
-  .allFields()
-  .allow<User>({ id: "2", role: "admin" })
-  .to("manage")
   .on("project")
   .allFields()
   .build();
@@ -497,7 +493,6 @@ const permissions = new PermissionBuilder<Resource>()
 // Usage
 const doc: Document = {
   id: "1",
-  type: "document",
   metadata: {
     title: "Test Document",
     status: "published",
@@ -508,7 +503,6 @@ const doc: Document = {
 
 const project: Project = {
   id: "2",
-  type: "project",
   name: "Test Project",
   members: [
     { userId: "1", role: "member" },
@@ -525,20 +519,15 @@ const admin: User = { id: "2", role: "admin" };
 
 // Type-safe permission checks
 const canReadDoc = permissions.checkObject(user, "read", "document", doc);
-const canReadProject = permissions.checkObject(
-  user,
-  "read",
-  "project",
-  project
-);
-const canManageDoc = permissions.checkObject(admin, "manage", "document", doc);
+const canReadProject = permissions.checkObject(user, "read", "project", project);
+const canManageProject = permissions.checkObject(admin, "manage", "project", project);
 
-// TypeScript will catch invalid field paths or wrong resource types
+// TypeScript will catch invalid actions
 const invalidCheck = permissions.check({
   subject: user,
-  action: "read",
+  action: "invalid", // Type error: invalid action
   object: "document",
-  field: "invalid.path", // Type error: invalid field path
+  field: "content",
   data: doc,
 });
 ```

@@ -33,7 +33,7 @@ If you don't install zod, frtrss will fall back to basic runtime validation.
 ## Basic Usage
 
 ```typescript
-import { PermissionBuilder } from "frtrss";
+import { PermissionBuilder, ResourceDefinition } from "frtrss";
 
 interface User {
   id: string;
@@ -50,9 +50,11 @@ interface Document {
   content: string;
 }
 
+type DocumentActions = "read" | "write";
+
 // Define the object type mapping
 type ObjectTypes = {
-  document: Document;
+  document: ResourceDefinition<Document, DocumentActions>;
 };
 
 // Create permissions with allow and deny rules
@@ -60,10 +62,10 @@ const permissions = new PermissionBuilder<ObjectTypes>()
   // Allow editors to read published documents with version >= 2
   .allow<User>({ id: "1", role: "editor" })
   .to(["read", "write"])
-  .on("document")
-  .fields(["metadata.title", "content"])
+  .on("document") // document name is statically typed
+  .fields(["metadata.title", "content"])    
   .when({
-    field: "metadata.status",
+    field: "metadata.status", // field name is statically typed
     operator: "eq",
     value: "published",
   })

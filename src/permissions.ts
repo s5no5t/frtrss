@@ -7,18 +7,22 @@ import {
   Condition,
   PathsToStringProps,
   DeepPartial,
+  ResourceDefinition,
+  ResourceType,
 } from "./types";
 
 /**
  * Manages a set of permission rules and provides methods for checking permissions
- * @template T The record type mapping resource types to their data types
+ * @template T The record type mapping resource types to their definitions
  */
-export class Permissions<T extends Record<string, any>> {
+export class Permissions<
+  T extends Record<string, ResourceDefinition<any, any>>
+> {
   /**
    * Creates a new Permissions instance
    * @param permissions An array of Permission objects that define the rules
    */
-  constructor(private permissions: Array<Permission<T, any>>) {}
+  constructor(private permissions: Array<Permission<T, any, keyof T>>) {}
 
   /**
    * Checks if a permission is granted
@@ -71,7 +75,7 @@ export class Permissions<T extends Record<string, any>> {
     subject: any,
     action: string,
     object: O,
-    data: T[O]
+    data: ResourceType<T, O>
   ): boolean {
     return this.check({
       subject,
@@ -110,9 +114,11 @@ export class Permissions<T extends Record<string, any>> {
     });
   }
 
-  private matchesConditions(
-    conditions: Array<Condition<T[keyof T], PathsToStringProps<T[keyof T]>>>,
-    data: DeepPartial<T[keyof T]>
+  private matchesConditions<O extends keyof T>(
+    conditions: Array<
+      Condition<ResourceType<T, O>, PathsToStringProps<ResourceType<T, O>>>
+    >,
+    data: DeepPartial<ResourceType<T, O>>
   ): boolean {
     return conditions.every((condition) => {
       const value = this.getFieldValue(data, condition.field);
@@ -205,12 +211,14 @@ export class Permissions<T extends Record<string, any>> {
 
   /**
    * Creates a new Permissions instance from a DTO
-   * @template T The record type mapping resource types to their data types
+   * @template T The record type mapping resource types to their definitions
    * @param dto The DTO to create from
    * @returns Permissions<T> A new Permissions instance
    * @throws PermissionValidationError if the DTO is invalid
    */
-  static fromDTO<T extends Record<string, any>>(dto: unknown): Permissions<T> {
+  static fromDTO<T extends Record<string, ResourceDefinition<any, any>>>(
+    dto: unknown
+  ): Permissions<T> {
     if (
       !dto ||
       typeof dto !== "object" ||
@@ -243,7 +251,10 @@ export class Permissions<T extends Record<string, any>> {
         object: rule.object as keyof T,
         fields: rule.fields as string[],
         conditions: (rule.conditions || []) as Array<
-          Condition<T[keyof T], PathsToStringProps<T[keyof T]>>
+          Condition<
+            ResourceType<T, keyof T>,
+            PathsToStringProps<ResourceType<T, keyof T>>
+          >
         >,
       };
     });
