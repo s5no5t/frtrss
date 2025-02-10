@@ -845,7 +845,7 @@ describe("PermissionBuilder", () => {
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("article")
-        .fields(["title", "category"])
+        .fields(["title"])
         .when({
           field: "status",
           operator: "eq",
@@ -910,9 +910,14 @@ describe("PermissionBuilder", () => {
 
       const articlePermissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
-        .to(["read", "write"])
+        .to("read")
         .on("article")
-        .allFields()
+        .fields(["title"])
+        .when({
+          field: "tags",
+          operator: "in",
+          value: "featured",
+        })
         .build();
 
       const articleDenyPermissions = new PermissionBuilder<ObjectType>()
@@ -968,13 +973,13 @@ describe("PermissionBuilder", () => {
         subject: { id: "1", role: "editor" },
         action: "read",
         object: "article",
-        field: "status",
+        field: "title",
         data: {
           id: "1",
           title: "Test Article",
           status: "published",
           category: "test",
-          tags: [],
+          tags: ["tag1", "tag2"],
           authorId: "1",
         } as Article,
       });
@@ -989,7 +994,7 @@ describe("PermissionBuilder", () => {
           title: "Test Article",
           status: "published",
           category: "test",
-          tags: [],
+          tags: ["tag1", "tag2", "tag3"],
           authorId: "1",
         } as Article,
       });
@@ -1017,7 +1022,7 @@ describe("PermissionBuilder", () => {
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("article")
-        .fields(["content"])
+        .fields(["title"])
         .when({
           field: "tags",
           operator: "in",
@@ -1071,7 +1076,7 @@ describe("PermissionBuilder", () => {
         subject: { id: "1", role: "editor" },
         action: "read",
         object: "article",
-        field: "content",
+        field: "title",
         data: {
           id: "1",
           title: "Test Article",
@@ -1086,7 +1091,7 @@ describe("PermissionBuilder", () => {
         subject: { id: "1", role: "editor" },
         action: "read",
         object: "article",
-        field: "content",
+        field: "title",
         data: {
           id: "1",
           title: "Test Article",
