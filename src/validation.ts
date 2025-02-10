@@ -53,7 +53,7 @@ export function validateDTO(
         rules: z.array(permissionRuleSchema),
       })
       .strict();
-  } catch (e) {
+  } catch {
     // zod not available, fall back to basic validation
     return validateWithoutZod(dto);
   }
