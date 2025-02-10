@@ -73,6 +73,41 @@ export type NestedPaths<T> = T extends object
  */
 export type PathsToStringProps<T> = T extends object ? NestedPaths<T> : never;
 
+/**
+ * Gets the type of a value at a specific path in an object type using dot notation
+ * @template T The object type to traverse
+ * @template P The dot-notation path to the value (e.g. "user.address.street")
+ * @returns The type of the value at the given path, or never if the path is invalid
+ *
+ * @example
+ * type User = {
+ *   name: string;
+ *   age: number;
+ *   address: {
+ *     street: string;
+ *     city: string;
+ *     geo: {
+ *       lat: number;
+ *       lng: number;
+ *     };
+ *   };
+ *   tags: string[];
+ * };
+ *
+ * // Simple property access
+ * type Name = ValueAtPath<User, "name">; // string
+ *
+ * // Nested property access
+ * type Street = ValueAtPath<User, "address.street">; // string
+ * type Lat = ValueAtPath<User, "address.geo.lat">; // number
+ *
+ * // Array property access
+ * type Tags = ValueAtPath<User, "tags">; // string[]
+ *
+ * // Invalid paths
+ * type Invalid1 = ValueAtPath<User, "nonexistent">; // never
+ * type Invalid2 = ValueAtPath<User, "name.invalid">; // never (can't traverse primitive)
+ */
 export type ValueAtPath<T, P extends string> = P extends keyof T
   ? T[P]
   : P extends `${infer K}.${infer R}`
