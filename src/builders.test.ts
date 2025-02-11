@@ -42,6 +42,71 @@ type ObjectType = {
 
 describe("PermissionBuilder", () => {
   describe("Fields", () => {
+    it("should support a single field", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .fields(["content"])
+        .build();
+
+      const allowedResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {} as Document,
+      });
+
+      const deniedResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "metadata.title",
+        data: {} as Document,
+      });
+
+      expect(allowedResult).toBe(true);
+      expect(deniedResult).toBe(false);
+    });
+
+    it("should support multiple fields", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .fields(["content", "metadata.title"])
+        .build();
+
+      const contentResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {} as Document,
+      });
+
+      const titleResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "metadata.title",
+        data: {} as Document,
+      });
+
+      const deniedResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "author.email",
+        data: {} as Document,
+      });
+
+      expect(contentResult).toBe(true);
+      expect(titleResult).toBe(true);
+      expect(deniedResult).toBe(false);
+    });
+
     it("should support wildcard fields", () => {
       const permissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "admin" })
