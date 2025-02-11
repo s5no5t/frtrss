@@ -212,6 +212,285 @@ describe("PermissionBuilder", () => {
     });
   });
 
+  describe("Objects", () => {
+    it("should support permissions across different objects", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .fields(["content"])
+        .when({
+          field: "metadata.status",
+          operator: "eq",
+          value: "published",
+        })
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("article")
+        .fields(["title"])
+        .when({
+          field: "status",
+          operator: "eq",
+          value: "published",
+        })
+        .build();
+
+      const documentResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {
+          id: "1",
+          metadata: {
+            status: "published",
+            version: 1,
+            title: "Test Document",
+          },
+          author: {
+            id: "1",
+            name: "John",
+            email: "john@example.com",
+          },
+          reviewers: [],
+        } as Document,
+      });
+
+      const articleResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "article",
+        field: "title",
+        data: {
+          id: "1",
+          title: "Test Article",
+          status: "published",
+          category: "test",
+          tags: [],
+          authorId: "1",
+        } as Article,
+      });
+
+      expect(documentResult).toBe(true);
+      expect(articleResult).toBe(true);
+    });
+
+    it("should correctly handle deny rules across different objects", () => {
+      const documentPermissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to(["read", "write"])
+        .on("document")
+        .allFields()
+        .build();
+
+      const documentDenyPermissions = new PermissionBuilder<ObjectType>()
+        .deny<User>({ id: "1", role: "editor" })
+        .to("write")
+        .on("document")
+        .fields(["metadata.status"])
+        .build();
+
+      const articlePermissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("article")
+        .fields(["title"])
+        .when({
+          field: "tags",
+          operator: "in",
+          value: "featured",
+        })
+        .build();
+
+      const articleDenyPermissions = new PermissionBuilder<ObjectType>()
+        .deny<User>({ id: "1", role: "editor" })
+        .to("write")
+        .on("article")
+        .fields(["status"])
+        .build();
+
+      const documentReadResult = documentPermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "metadata.status",
+        data: {
+          id: "1",
+          metadata: {
+            status: "published",
+            version: 1,
+            title: "Test Document",
+          },
+          author: {
+            id: "1",
+            name: "John",
+            email: "john@example.com",
+          },
+          reviewers: [],
+        } as Document,
+      });
+
+      const documentWriteResult = documentDenyPermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "write",
+        object: "document",
+        field: "metadata.status",
+        data: {
+          id: "1",
+          metadata: {
+            status: "published",
+            version: 1,
+            title: "Test Document",
+          },
+          author: {
+            id: "1",
+            name: "John",
+            email: "john@example.com",
+          },
+          reviewers: [],
+        } as Document,
+      });
+
+      const articleReadResult = articlePermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "article",
+        field: "title",
+        data: {
+          id: "1",
+          title: "Test Article",
+          status: "published",
+          category: "test",
+          tags: ["tag1", "featured", "tag2"],
+          authorId: "1",
+        } as Article,
+      });
+
+      const articleWriteResult = articleDenyPermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "write",
+        object: "article",
+        field: "status",
+        data: {
+          id: "1",
+          title: "Test Article",
+          status: "published",
+          category: "test",
+          tags: ["tag1", "featured", "tag2"],
+          authorId: "1",
+        } as Article,
+      });
+
+      expect(documentReadResult).toBe(true);
+      expect(documentWriteResult).toBe(false);
+      expect(articleReadResult).toBe(true);
+      expect(articleWriteResult).toBe(false);
+    });
+
+    it("should handle conditions independently for different objects", () => {
+      const documentPermissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .fields(["content"])
+        .when({
+          field: "metadata.version",
+          operator: "gte",
+          value: 2,
+        })
+        .build();
+
+      const articlePermissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("article")
+        .fields(["title"])
+        .when({
+          field: "tags",
+          operator: "in",
+          value: "featured",
+        })
+        .build();
+
+      const documentDenied = documentPermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {
+          id: "1",
+          metadata: {
+            status: "published",
+            version: 1,
+            title: "Test Document",
+          },
+          author: {
+            id: "1",
+            name: "John",
+            email: "john@example.com",
+          },
+          reviewers: [],
+        } as Document,
+      });
+
+      const documentAllowed = documentPermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {
+          id: "1",
+          metadata: {
+            status: "published",
+            version: 2,
+            title: "Test Document",
+          },
+          author: {
+            id: "1",
+            name: "John",
+            email: "john@example.com",
+          },
+          reviewers: [],
+        } as Document,
+      });
+
+      const articleDenied = articlePermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "article",
+        field: "title",
+        data: {
+          id: "1",
+          title: "Test Article",
+          status: "published",
+          category: "test",
+          tags: ["tag1", "tag2"],
+          authorId: "1",
+        } as Article,
+      });
+
+      const articleAllowed = articlePermissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "article",
+        field: "title",
+        data: {
+          id: "1",
+          title: "Test Article",
+          status: "published",
+          category: "test",
+          tags: ["tag1", "featured", "tag2"],
+          authorId: "1",
+        } as Article,
+      });
+
+      expect(documentDenied).toBe(false);
+      expect(documentAllowed).toBe(true);
+      expect(articleDenied).toBe(false);
+      expect(articleAllowed).toBe(true);
+    });
+  });
+
   describe("Fields", () => {
     it("should support a single field", () => {
       const permissions = new PermissionBuilder<ObjectType>()
@@ -703,285 +982,6 @@ describe("PermissionBuilder", () => {
         expect(deniedResult).toBe(false);
         expect(allowedResult).toBe(true);
       });
-    });
-  });
-
-  describe("Object Types", () => {
-    it("should support permissions across different object types", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
-        .allow<User>({ id: "1", role: "editor" })
-        .to("read")
-        .on("document")
-        .fields(["content"])
-        .when({
-          field: "metadata.status",
-          operator: "eq",
-          value: "published",
-        })
-        .allow<User>({ id: "1", role: "editor" })
-        .to("read")
-        .on("article")
-        .fields(["title"])
-        .when({
-          field: "status",
-          operator: "eq",
-          value: "published",
-        })
-        .build();
-
-      const documentResult = permissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "document",
-        field: "content",
-        data: {
-          id: "1",
-          metadata: {
-            status: "published",
-            version: 1,
-            title: "Test Document",
-          },
-          author: {
-            id: "1",
-            name: "John",
-            email: "john@example.com",
-          },
-          reviewers: [],
-        } as Document,
-      });
-
-      const articleResult = permissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "article",
-        field: "title",
-        data: {
-          id: "1",
-          title: "Test Article",
-          status: "published",
-          category: "test",
-          tags: [],
-          authorId: "1",
-        } as Article,
-      });
-
-      expect(documentResult).toBe(true);
-      expect(articleResult).toBe(true);
-    });
-
-    it("should correctly handle deny rules across different object types", () => {
-      const documentPermissions = new PermissionBuilder<ObjectType>()
-        .allow<User>({ id: "1", role: "editor" })
-        .to(["read", "write"])
-        .on("document")
-        .allFields()
-        .build();
-
-      const documentDenyPermissions = new PermissionBuilder<ObjectType>()
-        .deny<User>({ id: "1", role: "editor" })
-        .to("write")
-        .on("document")
-        .fields(["metadata.status"])
-        .build();
-
-      const articlePermissions = new PermissionBuilder<ObjectType>()
-        .allow<User>({ id: "1", role: "editor" })
-        .to("read")
-        .on("article")
-        .fields(["title"])
-        .when({
-          field: "tags",
-          operator: "in",
-          value: "featured",
-        })
-        .build();
-
-      const articleDenyPermissions = new PermissionBuilder<ObjectType>()
-        .deny<User>({ id: "1", role: "editor" })
-        .to("write")
-        .on("article")
-        .fields(["status"])
-        .build();
-
-      const documentReadResult = documentPermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "document",
-        field: "metadata.status",
-        data: {
-          id: "1",
-          metadata: {
-            status: "published",
-            version: 1,
-            title: "Test Document",
-          },
-          author: {
-            id: "1",
-            name: "John",
-            email: "john@example.com",
-          },
-          reviewers: [],
-        } as Document,
-      });
-
-      const documentWriteResult = documentDenyPermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "write",
-        object: "document",
-        field: "metadata.status",
-        data: {
-          id: "1",
-          metadata: {
-            status: "published",
-            version: 1,
-            title: "Test Document",
-          },
-          author: {
-            id: "1",
-            name: "John",
-            email: "john@example.com",
-          },
-          reviewers: [],
-        } as Document,
-      });
-
-      const articleReadResult = articlePermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "article",
-        field: "title",
-        data: {
-          id: "1",
-          title: "Test Article",
-          status: "published",
-          category: "test",
-          tags: ["tag1", "featured", "tag2"],
-          authorId: "1",
-        } as Article,
-      });
-
-      const articleWriteResult = articleDenyPermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "write",
-        object: "article",
-        field: "status",
-        data: {
-          id: "1",
-          title: "Test Article",
-          status: "published",
-          category: "test",
-          tags: ["tag1", "featured", "tag2"],
-          authorId: "1",
-        } as Article,
-      });
-
-      expect(documentReadResult).toBe(true);
-      expect(documentWriteResult).toBe(false);
-      expect(articleReadResult).toBe(true);
-      expect(articleWriteResult).toBe(false);
-    });
-
-    it("should handle conditions independently for different object types", () => {
-      const documentPermissions = new PermissionBuilder<ObjectType>()
-        .allow<User>({ id: "1", role: "editor" })
-        .to("read")
-        .on("document")
-        .fields(["content"])
-        .when({
-          field: "metadata.version",
-          operator: "gte",
-          value: 2,
-        })
-        .build();
-
-      const articlePermissions = new PermissionBuilder<ObjectType>()
-        .allow<User>({ id: "1", role: "editor" })
-        .to("read")
-        .on("article")
-        .fields(["title"])
-        .when({
-          field: "tags",
-          operator: "in",
-          value: "featured",
-        })
-        .build();
-
-      const documentDenied = documentPermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "document",
-        field: "content",
-        data: {
-          id: "1",
-          metadata: {
-            status: "published",
-            version: 1,
-            title: "Test Document",
-          },
-          author: {
-            id: "1",
-            name: "John",
-            email: "john@example.com",
-          },
-          reviewers: [],
-        } as Document,
-      });
-
-      const documentAllowed = documentPermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "document",
-        field: "content",
-        data: {
-          id: "1",
-          metadata: {
-            status: "published",
-            version: 2,
-            title: "Test Document",
-          },
-          author: {
-            id: "1",
-            name: "John",
-            email: "john@example.com",
-          },
-          reviewers: [],
-        } as Document,
-      });
-
-      const articleDenied = articlePermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "article",
-        field: "title",
-        data: {
-          id: "1",
-          title: "Test Article",
-          status: "published",
-          category: "test",
-          tags: ["tag1", "tag2"],
-          authorId: "1",
-        } as Article,
-      });
-
-      const articleAllowed = articlePermissions.check({
-        subject: { id: "1", role: "editor" },
-        action: "read",
-        object: "article",
-        field: "title",
-        data: {
-          id: "1",
-          title: "Test Article",
-          status: "published",
-          category: "test",
-          tags: ["tag1", "featured", "tag2"],
-          authorId: "1",
-        } as Article,
-      });
-
-      expect(documentDenied).toBe(false);
-      expect(documentAllowed).toBe(true);
-      expect(articleDenied).toBe(false);
-      expect(articleAllowed).toBe(true);
     });
   });
 });
