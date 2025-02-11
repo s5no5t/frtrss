@@ -1,11 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { Permissions } from "./permissions";
 import { PermissionValidationError, ResourceDefinition } from "./types";
+import { PermissionBuilder } from "./builders";
 
 interface Document {
   status: string;
+  title: string;
+  content: string;
+  metadata: {
+    title: string;
+    [key: string]: any;
+  };
+  comments: Array<{
+    text: string;
+    [key: string]: any;
+  }>;
   members: Array<{ userId: string; role: string }>;
-  // other fields can be added as needed
 }
 
 type DocumentActions = "read" | "write";
@@ -16,22 +26,17 @@ type ObjectTypes = {
 
 describe("Permissions Serialization", () => {
   it("should serialize and deserialize permissions correctly", () => {
-    const permissions = new Permissions<ObjectTypes>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["title", "content"],
-        conditions: [
-          {
-            field: "status",
-            operator: "eq",
-            value: "published",
-          },
-        ],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .fields(["title", "content"])
+      .when({
+        field: "status",
+        operator: "eq",
+        value: "published",
+      })
+      .build();
 
     const dto = permissions.toDTO();
     const deserialized = Permissions.fromDTO(dto);
@@ -77,16 +82,12 @@ describe("Permissions Serialization", () => {
   });
 
   it("should handle empty conditions array", () => {
-    const permissions = new Permissions<any>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["title", "content"],
-        conditions: [],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .fields(["title", "content"])
+      .build();
 
     const dto = permissions.toDTO();
     const deserialized = Permissions.fromDTO(dto);
@@ -98,22 +99,18 @@ describe("Permissions Serialization", () => {
 
 describe("Permissions Field Matching", () => {
   it("should match fields with wildcards", () => {
-    const permissions = new Permissions<any>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["metadata.*", "comments.*.text"],
-        conditions: [],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .fields(["metadata", "comments"])
+      .build();
 
     const result = permissions.check({
       subject: { id: "1", role: "admin" },
       action: "read",
       object: "document",
-      field: "metadata.title",
+      field: "metadata",
       data: {
         metadata: {
           title: "Test Document",
@@ -127,7 +124,7 @@ describe("Permissions Field Matching", () => {
       subject: { id: "1", role: "admin" },
       action: "read",
       object: "document",
-      field: "comments.0.text",
+      field: "comments",
       data: {
         comments: [
           {
@@ -141,22 +138,18 @@ describe("Permissions Field Matching", () => {
   });
 
   it("should handle wildcard field", () => {
-    const permissions = new Permissions<any>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["*"],
-        conditions: [],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .allFields()
+      .build();
 
     const result = permissions.check({
       subject: { id: "1", role: "admin" },
       action: "read",
       object: "document",
-      field: "metadata.title",
+      field: "metadata",
       data: {
         metadata: {
           title: "Test Document",
@@ -170,22 +163,17 @@ describe("Permissions Field Matching", () => {
 
 describe("Permissions Array Conditions", () => {
   it("should handle object comparison in arrays for 'in' operator", () => {
-    const permissions = new Permissions<ObjectTypes>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["*"],
-        conditions: [
-          {
-            field: "members",
-            operator: "in",
-            value: { userId: "1", role: "member" },
-          },
-        ],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .allFields()
+      .when({
+        field: "members",
+        operator: "in",
+        value: { userId: "1", role: "member" },
+      })
+      .build();
 
     const result = permissions.check({
       subject: { id: "1", role: "admin" },
@@ -219,22 +207,17 @@ describe("Permissions Array Conditions", () => {
   });
 
   it("should handle object comparison in arrays for 'nin' operator", () => {
-    const permissions = new Permissions<any>([
-      {
-        subject: { id: "1", role: "admin" },
-        action: "read",
-        object: "document",
-        fields: ["*"],
-        conditions: [
-          {
-            field: "members",
-            operator: "nin",
-            value: { userId: "1", role: "member" },
-          },
-        ],
-        type: "allow",
-      },
-    ]);
+    const permissions = new PermissionBuilder<ObjectTypes>()
+      .allow({ id: "1", role: "admin" })
+      .to("read")
+      .on("document")
+      .allFields()
+      .when({
+        field: "members",
+        operator: "nin",
+        value: { userId: "1", role: "member" },
+      })
+      .build();
 
     const result = permissions.check({
       subject: { id: "1", role: "admin" },

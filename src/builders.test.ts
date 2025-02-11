@@ -979,7 +979,7 @@ describe("PermissionBuilder", () => {
           title: "Test Article",
           status: "published",
           category: "test",
-          tags: ["tag1", "tag2"],
+          tags: ["tag1", "featured", "tag2"],
           authorId: "1",
         } as Article,
       });
@@ -994,7 +994,7 @@ describe("PermissionBuilder", () => {
           title: "Test Article",
           status: "published",
           category: "test",
-          tags: ["tag1", "tag2", "tag3"],
+          tags: ["tag1", "featured", "tag2"],
           authorId: "1",
         } as Article,
       });
@@ -1097,7 +1097,7 @@ describe("PermissionBuilder", () => {
           title: "Test Article",
           status: "published",
           category: "test",
-          tags: ["tag1", "tag2", "tag3"],
+          tags: ["tag1", "featured", "tag2"],
           authorId: "1",
         } as Article,
       });

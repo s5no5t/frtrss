@@ -141,29 +141,29 @@ export class Permissions<
         case "lte":
           return value <= condition.value;
         case "in":
-          return (
-            Array.isArray(value) &&
-            value.some((item) =>
-              typeof item === "object" && item !== null
-                ? Object.entries(item as Record<string, unknown>).every(
-                    ([k, v]) =>
-                      (condition.value as Record<string, unknown>)[k] === v
-                  )
-                : item === condition.value
-            )
-          );
+          if (!Array.isArray(value)) {
+            return false;
+          }
+          if (typeof condition.value === "object" && condition.value !== null) {
+            return value.some((item) =>
+              Object.entries(condition.value as Record<string, unknown>).every(
+                ([k, v]) => item[k] === v
+              )
+            );
+          }
+          return value.includes(condition.value);
         case "nin":
-          return (
-            Array.isArray(value) &&
-            !value.some((item) =>
-              typeof item === "object" && item !== null
-                ? Object.entries(item as Record<string, unknown>).every(
-                    ([k, v]) =>
-                      (condition.value as Record<string, unknown>)[k] === v
-                  )
-                : item === condition.value
-            )
-          );
+          if (!Array.isArray(value)) {
+            return false;
+          }
+          if (typeof condition.value === "object" && condition.value !== null) {
+            return !value.some((item) =>
+              Object.entries(condition.value as Record<string, unknown>).every(
+                ([k, v]) => item[k] === v
+              )
+            );
+          }
+          return !value.includes(condition.value);
         default:
           return false;
       }
