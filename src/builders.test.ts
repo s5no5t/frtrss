@@ -298,7 +298,62 @@ describe("PermissionBuilder", () => {
     });
   });
 
-  describe("Operators", () => {
+  describe("Conditions", () => {
+    it("should support multiple conditions", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .fields(["content"])
+        .when({
+          field: "metadata.status",
+          operator: "eq",
+          value: "published",
+        })
+        .when({
+          field: "metadata.version",
+          operator: "gte",
+          value: 2,
+        })
+        .build();
+
+      const deniedResults = [
+        // Status correct but version too low
+        {
+          metadata: { status: "published", version: 1 },
+        } as Document,
+        // Version correct but status wrong
+        {
+          metadata: { status: "draft", version: 2 },
+        } as Document,
+        // Both conditions wrong
+        {
+          metadata: { status: "draft", version: 1 },
+        } as Document,
+      ].map((data) =>
+        permissions.check({
+          subject: { id: "1", role: "editor" },
+          action: "read",
+          object: "document",
+          field: "content",
+          data,
+        })
+      );
+
+      const allowedResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {
+          metadata: { status: "published", version: 2 },
+        } as Document,
+      });
+
+      expect(deniedResults.every((result) => result === false)).toBe(true);
+      expect(allowedResult).toBe(true);
+    });
+
     describe("Equality Operators", () => {
       it("should support eq operator with strings", () => {
         const permissions = new PermissionBuilder<ObjectType>()
