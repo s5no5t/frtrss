@@ -2,6 +2,7 @@
   "name": "frtrss",
   "version": "0.7.0",
   "description": "A lightweight, type-safe authorization library for JavaScript/TypeScript applications",
+  "repository": "https://github.com/s5no5t/frtrss",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
