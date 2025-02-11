@@ -11,6 +11,7 @@ import {
   ResourceType,
   ResourceActions,
 } from "./types";
+import { validateDTO } from "./validation";
 
 /**
  * Manages a set of permission rules and provides methods for checking permissions
@@ -216,8 +217,13 @@ export class Permissions<
    * @throws PermissionValidationError if the DTO is invalid
    */
   static fromDTO<T extends Record<string, ResourceDefinition<any, any>>>(
-    dto: unknown
+    dto: unknown,
+    validate = false
   ): Permissions<T> {
+    if (validate) {
+      dto = validateDTO(dto);
+    }
+
     if (
       !dto ||
       typeof dto !== "object" ||

@@ -83,15 +83,54 @@ describe("Permissions", () => {
       );
     });
 
-    it("should throw PermissionValidationError for invalid DTO format", () => {
-      const invalidDTO = {
-        version: 2,
-        rules: [],
+    it("should validate DTO when validate is true", () => {
+      const validDTO = {
+        version: 1,
+        rules: [
+          {
+            effect: "allow",
+            subject: { id: "1", role: "admin" },
+            action: "read",
+            object: "document",
+            fields: ["metadata.title", "content"],
+            conditions: [
+              {
+                field: "metadata.status",
+                operator: "eq",
+                value: "published",
+              },
+            ],
+          },
+        ],
       };
 
-      expect(() => Permissions.fromDTO(invalidDTO)).toThrow(
-        PermissionValidationError
-      );
+      // Should not throw with validate=true and valid DTO
+      expect(() => Permissions.fromDTO(validDTO, true)).not.toThrow();
+
+      // Should throw with validate=true and invalid DTO
+      const invalidDTO = {
+        version: 2, // Invalid version
+        rules: [],
+      };
+      expect(() => Permissions.fromDTO(invalidDTO, true)).toThrow();
+    });
+
+    it("should skip validation when validate is false", () => {
+      const dto = {
+        version: 1,
+        rules: [
+          {
+            effect: "allow",
+            subject: { id: "1", role: "admin" },
+            action: "read",
+            object: "document",
+            fields: ["metadata.title", "content"],
+          },
+        ],
+      };
+
+      // Should not throw even with missing optional fields when validate=false
+      expect(() => Permissions.fromDTO(dto, false)).not.toThrow();
     });
 
     it("should handle empty conditions array", () => {

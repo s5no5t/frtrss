@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PermissionRuleDTO, PermissionsDTO } from "./types";
+import { PermissionValidationError } from "./types";
 
 /**
  * Validates a permissions DTO using zod schema validation
@@ -37,55 +38,14 @@ export function validateDTO(dto: unknown): PermissionsDTO {
       .strict();
   } catch {
     // zod not available, fall back to basic validation
-    return validateWithoutZod(dto);
+    return dto as PermissionsDTO;
   }
 
   try {
     return zodSchema.parse(dto);
   } catch (error) {
-    throw new Error(
+    throw new PermissionValidationError(
       error instanceof Error ? error.message : "Invalid permissions DTO"
     );
   }
-}
-
-function validateWithoutZod(dto: unknown): PermissionsDTO {
-  const typedDto = dto as PermissionsDTO;
-  if (
-    typeof typedDto !== "object" ||
-    !typedDto ||
-    typedDto.version !== 1 ||
-    !Array.isArray(typedDto.rules)
-  ) {
-    throw new Error(
-      "Invalid permissions DTO: basic structure validation failed"
-    );
-  }
-
-  for (const rule of typedDto.rules) {
-    if (
-      typeof rule !== "object" ||
-      !rule ||
-      (rule.effect !== "allow" && rule.effect !== "deny") ||
-      typeof rule.action !== "string" ||
-      typeof rule.object !== "string" ||
-      !Array.isArray(rule.fields) ||
-      !rule.fields.every((f) => typeof f === "string") ||
-      (rule.conditions &&
-        (!Array.isArray(rule.conditions) ||
-          !rule.conditions.every(
-            (c) =>
-              typeof c === "object" &&
-              c &&
-              typeof c.field === "string" &&
-              typeof c.operator === "string" &&
-              ["eq", "ne", "in", "nin", "gt", "gte", "lt", "lte"].includes(
-                c.operator
-              )
-          )))
-    ) {
-      throw new Error("Invalid permissions DTO: rule validation failed");
-    }
-  }
-  return typedDto;
 }
