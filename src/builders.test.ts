@@ -75,6 +75,36 @@ describe("PermissionBuilder", () => {
     });
   });
 
+  describe("Subject", () => {
+    it("should match exact subject", () => {
+      const permissions = new PermissionBuilder<Objects>()
+        .allow<User>({ id: "1", role: "editor" })
+        .to("read")
+        .on("document")
+        .allFields()
+        .build();
+
+      const matchingResult = permissions.check({
+        subject: { id: "1", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {} as Document,
+      });
+
+      const nonMatchingResult = permissions.check({
+        subject: { id: "2", role: "editor" },
+        action: "read",
+        object: "document",
+        field: "content",
+        data: {} as Document,
+      });
+
+      expect(matchingResult).toBe(true);
+      expect(nonMatchingResult).toBe(false);
+    });
+  });
+
   describe("Actions", () => {
     it("should support single action", () => {
       const permissions = new PermissionBuilder<Objects>()
