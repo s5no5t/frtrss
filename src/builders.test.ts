@@ -706,7 +706,7 @@ describe("PermissionBuilder", () => {
     });
   });
 
-  describe("Resource Types", () => {
+  describe("Object Types", () => {
     it("should support permissions across different object types", () => {
       const permissions = new PermissionBuilder<ObjectType>()
         .allow<User>({ id: "1", role: "editor" })
