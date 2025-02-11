@@ -53,12 +53,12 @@ interface Document {
 type DocumentActions = "read" | "write";
 
 // Define the object type mapping
-type ObjectTypes = {
+type Objects = {
   document: ResourceDefinition<Document, DocumentActions>;
 };
 
 // Create permissions with allow and deny rules
-const permissions = new PermissionBuilder<ObjectTypes>()
+const permissions = new PermissionBuilder<Objects>()
   // Allow editors to read published documents with version >= 2
   .allow<User>({ id: "1", role: "editor" })
   .to(["read", "write"])
