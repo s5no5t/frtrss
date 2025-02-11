@@ -35,7 +35,7 @@ interface Article {
 type DocumentActions = "read" | "write" | "update" | "delete" | "list";
 type ArticleActions = "read" | "write" | "publish" | "unpublish";
 
-type ObjectType = {
+type Objects = {
   document: ResourceDefinition<Document, DocumentActions>;
   article: ResourceDefinition<Article, ArticleActions>;
 };
@@ -43,7 +43,7 @@ type ObjectType = {
 describe("PermissionBuilder", () => {
   describe("Deny", () => {
     it("should support deny rules overriding allow rules", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -77,7 +77,7 @@ describe("PermissionBuilder", () => {
 
   describe("Actions", () => {
     it("should support single action", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -114,7 +114,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should support multiple actions", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to(["read", "list"])
         .on("document")
@@ -160,7 +160,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should support multiple actions with deny rules", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to(["read", "write", "list"])
         .on("document")
@@ -214,7 +214,7 @@ describe("PermissionBuilder", () => {
 
   describe("Objects", () => {
     it("should support permissions across different objects", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -276,21 +276,21 @@ describe("PermissionBuilder", () => {
     });
 
     it("should correctly handle deny rules across different objects", () => {
-      const documentPermissions = new PermissionBuilder<ObjectType>()
+      const documentPermissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to(["read", "write"])
         .on("document")
         .allFields()
         .build();
 
-      const documentDenyPermissions = new PermissionBuilder<ObjectType>()
+      const documentDenyPermissions = new PermissionBuilder<Objects>()
         .deny<User>({ id: "1", role: "editor" })
         .to("write")
         .on("document")
         .fields(["metadata.status"])
         .build();
 
-      const articlePermissions = new PermissionBuilder<ObjectType>()
+      const articlePermissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("article")
@@ -302,7 +302,7 @@ describe("PermissionBuilder", () => {
         })
         .build();
 
-      const articleDenyPermissions = new PermissionBuilder<ObjectType>()
+      const articleDenyPermissions = new PermissionBuilder<Objects>()
         .deny<User>({ id: "1", role: "editor" })
         .to("write")
         .on("article")
@@ -388,7 +388,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should handle conditions independently for different objects", () => {
-      const documentPermissions = new PermissionBuilder<ObjectType>()
+      const documentPermissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -400,7 +400,7 @@ describe("PermissionBuilder", () => {
         })
         .build();
 
-      const articlePermissions = new PermissionBuilder<ObjectType>()
+      const articlePermissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("article")
@@ -493,7 +493,7 @@ describe("PermissionBuilder", () => {
 
   describe("Fields", () => {
     it("should support a single field", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -521,7 +521,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should support multiple fields", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -558,7 +558,7 @@ describe("PermissionBuilder", () => {
     });
 
     it("should support wildcard fields", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "admin" })
         .to("read")
         .on("document")
@@ -579,7 +579,7 @@ describe("PermissionBuilder", () => {
 
   describe("Conditions", () => {
     it("should support multiple conditions", () => {
-      const permissions = new PermissionBuilder<ObjectType>()
+      const permissions = new PermissionBuilder<Objects>()
         .allow<User>({ id: "1", role: "editor" })
         .to("read")
         .on("document")
@@ -635,7 +635,7 @@ describe("PermissionBuilder", () => {
 
     describe("Equality Operators", () => {
       it("should support eq operator with strings", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -672,7 +672,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support eq operator with numbers", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -709,7 +709,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support ne operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -754,7 +754,7 @@ describe("PermissionBuilder", () => {
 
     describe("Numeric Comparison Operators", () => {
       it("should support gt operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -793,7 +793,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support gte operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -832,7 +832,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support lt operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -871,7 +871,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support lte operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -912,7 +912,7 @@ describe("PermissionBuilder", () => {
 
     describe("Array Membership Operators", () => {
       it("should support array in operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
@@ -941,7 +941,7 @@ describe("PermissionBuilder", () => {
       });
 
       it("should support array nin operator", () => {
-        const permissions = new PermissionBuilder<ObjectType>()
+        const permissions = new PermissionBuilder<Objects>()
           .allow<User>({ id: "1", role: "editor" })
           .to("read")
           .on("document")
