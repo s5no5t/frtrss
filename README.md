@@ -123,9 +123,10 @@ See [API.md](./doc/API.md).
 frtrss implements [Attribute-Based Access Control (ABAC)](https://en.wikipedia.org/wiki/Attribute-based_access_control), a flexible and powerful authorization model that evaluates permissions based on attributes/properties of:
 
 - The subject (user/service requesting access)
-- The object (resource being accessed)
 - The action (operation being performed)
-- The environment (context of the request)
+- The object (resource being accessed)
+- The fields (specific properties of the object being accessed)
+- The conditions (context of the request)
 
 This approach allows for more dynamic and fine-grained access control compared to traditional role-based systems, enabling complex permission rules based on data properties and conditions.
 
