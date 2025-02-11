@@ -24,13 +24,8 @@ describe("validateDTO", () => {
     ],
   };
 
-  it("should return dto as-is when validation is disabled", () => {
-    const result = validateDTO(validDTO, false);
-    expect(result).toBe(validDTO);
-  });
-
   it("should validate a correct DTO with zod", () => {
-    const result = validateDTO(validDTO, true);
+    const result = validateDTO(validDTO);
     expect(result).toEqual(validDTO);
   });
 
@@ -47,34 +42,34 @@ describe("validateDTO", () => {
         },
       ],
     };
-    const result = validateDTO(dtoWithoutConditions, true);
+    const result = validateDTO(dtoWithoutConditions);
     expect(result).toEqual(dtoWithoutConditions);
   });
 
   describe("validateWithoutZod", () => {
     it("should validate basic structure without zod", () => {
-      const result = validateDTO(validDTO, true);
+      const result = validateDTO(validDTO);
       expect(result).toEqual(validDTO);
     });
 
     it("should throw for non-object input", () => {
-      expect(() => validateDTO("not an object", true)).toThrow();
-      expect(() => validateDTO(null, true)).toThrow();
-      expect(() => validateDTO(undefined, true)).toThrow();
-      expect(() => validateDTO(123, true)).toThrow();
+      expect(() => validateDTO("not an object")).toThrow();
+      expect(() => validateDTO(null)).toThrow();
+      expect(() => validateDTO(undefined)).toThrow();
+      expect(() => validateDTO(123)).toThrow();
     });
 
     it("should throw for invalid version", () => {
-      expect(() => validateDTO({ version: 2, rules: [] }, true)).toThrow();
+      expect(() => validateDTO({ version: 2, rules: [] })).toThrow();
     });
 
     it("should throw for missing rules array", () => {
-      expect(() => validateDTO({ version: 1 }, true)).toThrow();
+      expect(() => validateDTO({ version: 1 })).toThrow();
     });
 
     it("should throw for invalid rules array", () => {
       expect(() =>
-        validateDTO({ version: 1, rules: "not an array" }, true)
+        validateDTO({ version: 1, rules: "not an array" })
       ).toThrow();
     });
 
@@ -88,7 +83,7 @@ describe("validateDTO", () => {
           },
         ],
       };
-      expect(() => validateDTO(invalidRule, true)).toThrow();
+      expect(() => validateDTO(invalidRule)).toThrow();
     });
 
     it("should throw for invalid effect value", () => {
@@ -104,7 +99,7 @@ describe("validateDTO", () => {
           },
         ],
       };
-      expect(() => validateDTO(invalidEffect, true)).toThrow();
+      expect(() => validateDTO(invalidEffect)).toThrow();
     });
 
     it("should throw for invalid fields array", () => {
@@ -120,7 +115,7 @@ describe("validateDTO", () => {
           },
         ],
       };
-      expect(() => validateDTO(invalidFields, true)).toThrow();
+      expect(() => validateDTO(invalidFields)).toThrow();
     });
 
     it("should throw for invalid conditions structure", () => {
@@ -143,7 +138,7 @@ describe("validateDTO", () => {
           },
         ],
       };
-      expect(() => validateDTO(invalidConditions, true)).toThrow();
+      expect(() => validateDTO(invalidConditions)).toThrow();
     });
 
     it("should throw for invalid condition operator", () => {
@@ -166,7 +161,7 @@ describe("validateDTO", () => {
           },
         ],
       };
-      expect(() => validateDTO(invalidOperator, true)).toThrow();
+      expect(() => validateDTO(invalidOperator)).toThrow();
     });
 
     it("should validate all valid condition operators", () => {
@@ -191,7 +186,7 @@ describe("validateDTO", () => {
             },
           ],
         };
-        expect(() => validateDTO(dto, true)).not.toThrow();
+        expect(() => validateDTO(dto)).not.toThrow();
       });
     });
   });
