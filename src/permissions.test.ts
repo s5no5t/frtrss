@@ -58,6 +58,26 @@ describe("Permissions", () => {
   });
 
   describe("DTO Validation", () => {
+    it("should throw PermissionValidationError for missing version field", () => {
+      const invalidDTO = {
+        rules: [],
+      };
+
+      expect(() => Permissions.fromDTO(invalidDTO)).toThrow(
+        PermissionValidationError
+      );
+    });
+
+    it("should throw PermissionValidationError for missing rules field", () => {
+      const invalidDTO = {
+        version: 1,
+      };
+
+      expect(() => Permissions.fromDTO(invalidDTO)).toThrow(
+        PermissionValidationError
+      );
+    });
+
     it("should throw PermissionValidationError for invalid DTO", () => {
       const invalidDTO = {
         version: 1,
