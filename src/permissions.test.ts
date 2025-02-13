@@ -24,7 +24,7 @@ interface Article {
   title: string;
   status: "draft" | "published";
   category: string;
-  tags: string[];
+  tags: Array<{ name: string; priority?: number }>;
   authorId: string;
 }
 
@@ -166,6 +166,220 @@ describe("Permissions", () => {
 
       expect(deserialized).toBeInstanceOf(Permissions);
       expect(deserialized.toDTO()).toEqual(dto);
+    });
+  });
+
+  describe("Array Conditions", () => {
+    it("should handle array membership with primitive values", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("document")
+        .fields(["reviewers"])
+        .when({
+          field: "reviewers",
+          operator: "in",
+          value: "user1",
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "reviewers",
+          data: { reviewers: ["user1", "user2"] },
+        })
+      ).toBe(true);
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "reviewers",
+          data: { reviewers: ["user3"] },
+        })
+      ).toBe(false);
+    });
+
+    it("should handle array non-membership with primitive values", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("document")
+        .fields(["reviewers"])
+        .when({
+          field: "reviewers",
+          operator: "nin",
+          value: "user1",
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "reviewers",
+          data: { reviewers: ["user2", "user3"] },
+        })
+      ).toBe(true);
+    });
+
+    it("should handle array membership with object values", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("article")
+        .fields(["tags"])
+        .when({
+          field: "tags",
+          operator: "in",
+          value: { name: "featured" },
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "article",
+          field: "tags",
+          data: { tags: [{ name: "featured", priority: 1 }, { name: "news" }] },
+        })
+      ).toBe(true);
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "article",
+          field: "tags",
+          data: { tags: [{ name: "news" }, { name: "tech" }] },
+        })
+      ).toBe(false);
+    });
+
+    it("should handle array non-membership with object values", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("article")
+        .fields(["tags"])
+        .when({
+          field: "tags",
+          operator: "nin",
+          value: { name: "draft" },
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "article",
+          field: "tags",
+          data: { tags: [{ name: "published" }, { name: "featured" }] },
+        })
+      ).toBe(true);
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "article",
+          field: "tags",
+          data: { tags: [{ name: "draft" }, { name: "review" }] },
+        })
+      ).toBe(false);
+    });
+
+    it("should handle comparison with nested object values", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("document")
+        .fields(["author.id"])
+        .when({
+          field: "author.id",
+          operator: "eq",
+          value: "1",
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "author.id",
+          data: {
+            author: { id: "1", name: "John", email: "john@example.com" },
+          },
+        })
+      ).toBe(true);
+    });
+  });
+
+  describe("Field Value Resolution", () => {
+    it("should handle array field access", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("document")
+        .fields(["reviewers"])
+        .when({
+          field: "reviewers",
+          operator: "in",
+          value: "user1",
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "reviewers",
+          data: { reviewers: ["user1", "user2"] },
+        })
+      ).toBe(true);
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "reviewers",
+          data: { reviewers: [] },
+        })
+      ).toBe(false);
+    });
+
+    it("should handle undefined values in nested paths", () => {
+      const permissions = new PermissionBuilder<ObjectType>()
+        .allow({ role: "admin" })
+        .to("read")
+        .on("document")
+        .fields(["metadata.title"])
+        .when({
+          field: "metadata.title",
+          operator: "eq",
+          value: "test",
+        })
+        .build();
+
+      expect(
+        permissions.check({
+          subject: { role: "admin" },
+          action: "read",
+          object: "document",
+          field: "metadata.title",
+          data: { metadata: {} },
+        })
+      ).toBe(false);
     });
   });
 });
